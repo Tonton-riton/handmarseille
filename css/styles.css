@@ -3240,42 +3240,189 @@ body[data-bg-theme="christmas"] .arena-background {
 }
 
 /* ==========================================================================
-   RESPONSIVE (TABLETTE & SMARTPHONE)
+   RESPONSIVE COMPLET (ORDINATEUR, TABLETTE PAYSAGE/PORTRAIT & SMARTPHONE)
    ========================================================================== */
+
+/* 1. Écrans moyens & Tablettes paysage (<= 1120px) */
+@media (max-width: 1120px) {
+  .top-navbar {
+    padding: 10px 18px;
+  }
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+  .app-container {
+    padding: 16px 16px 40px;
+  }
+  .admin-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+}
+
+/* 2. Tablettes & Petits ordinateurs (<= 980px) */
 @media (max-width: 980px) {
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .hero-cta-group {
     grid-template-columns: 1fr;
+    max-width: 560px;
   }
   .quick-launch-row {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
+  .quick-field {
+    min-width: 0;
+  }
+  /* Réorganisation de l'arène du quiz sur tablette : Chrono & Compteur côte à côte en haut, Média au centre */
   .kahoot-stage-middle {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "left right"
+      "center center";
+    gap: 14px;
   }
-  .kahoot-stage-left,
-  .kahoot-stage-right {
+  .kahoot-stage-left {
+    grid-area: left;
     flex-direction: row;
-    justify-content: center;
+    justify-content: flex-start;
+  }
+  .kahoot-stage-right {
+    grid-area: right;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .kahoot-stage-center {
+    grid-area: center;
+    min-height: auto;
+  }
+  .kahoot-timer-circle,
+  .kahoot-answers-counter-circle {
+    width: 84px;
+    height: 84px;
+  }
+  .k-timer-number,
+  .k-ans-number {
+    font-size: 1.65rem;
   }
   .admin-grid-2col,
-  .answers-sheet-grid {
+  .answers-sheet-grid,
+  .admin-quizzes-grid {
     grid-template-columns: 1fr;
+  }
+  .keyboard-hint {
+    display: none;
   }
 }
 
-@media (max-width: 680px) {
-  .top-navbar { padding: 10px 14px; }
-  .nav-club-name { font-size: 0.86rem; }
-  .nav-btn-label { display: none; }
-  .categories-grid,
-  .quick-launch-row,
-  .hero-cta-group,
-  .kahoot-options-grid,
+/* 3. Tablettes portrait & Grands smartphones (<= 768px) */
+@media (max-width: 768px) {
+  .top-navbar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .nav-logo-wrap {
+    width: 38px;
+    height: 38px;
+  }
+  .nav-club-name {
+    font-size: 0.82rem;
+  }
+  .nav-event-tag {
+    font-size: 0.7rem;
+  }
+  .nav-btn-label {
+    display: none;
+  }
+  /* Garder un badge compact sur le bouton Admin */
+  #btn-nav-admin .nav-badge {
+    display: inline-block;
+  }
+  .nav-actions {
+    gap: 5px;
+  }
+  .nav-btn {
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+  .hero-card {
+    padding: 20px 16px 24px;
+    border-radius: 20px;
+  }
+  .hero-logo-frame {
+    width: 104px;
+    height: 104px;
+  }
+  .christmas-ribbon {
+    font-size: 0.7rem;
+    padding: 6px 12px;
+    letter-spacing: 0.4px;
+    text-align: center;
+  }
+  .quick-launch-panel {
+    padding: 14px 14px;
+  }
+  .lobby-pin-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 18px 16px;
+  }
+  .lobby-pin-actions {
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .lobby-arena {
+    padding: 18px 14px;
+  }
+  .lobby-status-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lobby-quick-add-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .lobby-name-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .admin-header {
+    padding: 18px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .admin-header-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .btn-admin-launch-now {
+    grid-column: 1 / -1;
+  }
+  .admin-tabs {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 6px 8px;
+  }
+  .admin-tab {
+    font-size: 0.8rem;
+    padding: 10px 8px;
+  }
+  .admin-tab-content {
+    padding: 16px 14px;
+  }
+  .admin-box {
+    padding: 16px 14px;
+  }
   .options-editor-grid,
   .q-bank-options,
+  .sheet-opts-grid,
   .form-row-2col,
   .form-row-3col,
   .bank-filters-bar,
@@ -3284,14 +3431,172 @@ body[data-bg-theme="christmas"] .arena-background {
   .radio-cards-row {
     grid-template-columns: 1fr;
   }
-  .hero-cta-group button {
+  .k-float-shape {
+    width: 85px;
+    height: 85px;
+    font-size: 2.6rem;
+    opacity: 0.55;
+  }
+}
+
+/* 4. Smartphones (<= 600px) */
+@media (max-width: 600px) {
+  .app-container {
+    padding: 10px 10px 32px;
+  }
+  .nav-brand-text .nav-event-tag {
+    display: none;
+  }
+  .categories-grid,
+  .kahoot-options-grid {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+  .btn-primary-giant,
+  .btn-kahoot-lobby-giant,
+  .btn-secondary-giant {
     width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+    font-size: 0.96rem;
+    min-height: 52px;
+    padding: 12px 16px;
+  }
+  .player-join-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px 14px;
+  }
+  .btn-join-pin-small {
+    width: 100%;
+  }
+  /* Arène du Quiz ultra-compacte sur téléphone pour tout voir sans scroller */
+  .kahoot-top-strip {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .k-strip-center {
+    order: 3;
+    min-width: 100%;
+  }
+  .team-turn-banner {
+    padding: 8px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .team-turn-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .kahoot-question-banner {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-radius: 16px;
+  }
+  .kahoot-question-title {
+    font-size: 1.16rem;
+  }
+  .question-illustration {
+    height: 125px;
+  }
+  .kahoot-tile-btn {
+    min-height: 68px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    border-radius: 14px;
+    gap: 12px;
+  }
+  .kahoot-shape-box {
+    width: 42px;
+    height: 42px;
+    font-size: 1.35rem;
+    border-radius: 10px;
+  }
+  /* Podium & Statistiques sur smartphone */
+  .results-card {
+    padding: 22px 14px;
+  }
+  .results-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .stat-box {
+    padding: 14px 10px;
+  }
+  .stat-box-value {
+    font-size: 1.4rem;
+  }
+  .podium-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    align-items: end;
+  }
+  .podium-step {
+    width: 100%;
+    padding: 12px 6px;
+    border-radius: 14px 14px 6px 6px;
+  }
+  .podium-1 { min-height: 165px; }
+  .podium-2 { min-height: 135px; }
+  .podium-3 { min-height: 118px; }
+  .podium-medal { font-size: 1.8rem; }
+  .podium-team-name { font-size: 0.85rem; }
+  .podium-team-pts { font-size: 0.85rem; padding: 3px 8px; }
+
+  /* Manette joueur plein écran sur smartphone */
+  .player-controller-card {
+    padding: 20px 14px;
+  }
+  .player-pad-grid {
+    height: 290px;
+    gap: 12px;
+  }
+  .pad-shape {
+    font-size: 3.2rem;
+  }
+
+  /* Édition des réponses dans le Panel Admin sur mobile */
+  .q-bank-opt,
+  .option-editor-row {
+    flex-wrap: wrap;
+  }
+  .inline-opt-input {
+    min-width: 140px;
+  }
+  .btn-set-correct,
+  .correct-choice-pill {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .toast-notification {
+    left: 12px;
+    right: 12px;
+    bottom: 14px;
+    text-align: center;
+  }
+}
+
+/* 5. Très petits smartphones (<= 390px) */
+@media (max-width: 390px) {
+  .mode-pill {
+    font-size: 0.78rem;
+    padding: 0 6px;
+    gap: 4px;
+  }
+  .admin-tabs {
+    grid-template-columns: 1fr;
+  }
+  .results-stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media print {
   body { background: #fff !important; color: #000 !important; }
-  .top-navbar, .admin-header-right, .admin-tabs, .admin-section-toolbar button, #fx-canvas, .kahoot-bg-shapes {
+  .top-navbar, .admin-header-right, .admin-tabs, .admin-section-toolbar button, #fx-canvas, .kahoot-bg-shapes, .arena-background {
     display: none !important;
   }
   .admin-panel-card { border: none !important; box-shadow: none !important; }
