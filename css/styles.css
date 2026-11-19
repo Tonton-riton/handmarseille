@@ -3117,6 +3117,154 @@ body[data-bg-theme="christmas"] .arena-background {
   color: #fff;
 }
 
+/* Salle d'attente vide (Lobby Animateur) */
+.lobby-empty-waiting {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px dashed rgba(255, 255, 255, 0.22);
+  border-radius: 20px;
+  padding: 36px 24px;
+  text-align: center;
+  max-width: 620px;
+  width: 100%;
+  color: #e2e8f0;
+}
+
+.lobby-empty-pulse {
+  font-size: 3.2rem;
+  margin-bottom: 10px;
+  animation: trophyBounce 1.6s infinite ease-in-out;
+}
+
+.lobby-empty-waiting h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.lobby-empty-waiting p {
+  font-size: 0.94rem;
+  color: #93c5fd;
+  line-height: 1.45;
+}
+
+/* Vues de la Manette Participant : Salle d'attente, Réponse verrouillée, Résultat */
+.player-waiting-box,
+.player-locked-box,
+.player-result-box {
+  border-radius: 20px;
+  padding: 32px 20px;
+  text-align: center;
+  animation: fadeSlideIn 0.25s ease-out;
+}
+
+.player-waiting-box {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px dashed rgba(255, 255, 255, 0.24);
+}
+
+.player-waiting-avatar {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  border: 3px solid var(--mphb-yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+}
+
+.player-waiting-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--mphb-yellow);
+  margin-bottom: 8px;
+}
+
+.player-waiting-text {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.player-locked-box {
+  background: rgba(56, 189, 248, 0.14);
+  border: 2px solid rgba(56, 189, 248, 0.45);
+}
+
+.player-locked-spinner {
+  font-size: 3.4rem;
+  margin-bottom: 10px;
+  animation: pulseUrgent 0.9s infinite;
+}
+
+.player-locked-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.player-locked-sub {
+  font-size: 0.92rem;
+  color: #bae6fd;
+}
+
+.player-result-box.result-win {
+  background: linear-gradient(165deg, #16a34a 0%, #15803d 100%);
+  border: 3px solid #86efac;
+  box-shadow: 0 12px 30px rgba(22, 163, 74, 0.45);
+}
+
+.player-result-box.result-lose {
+  background: linear-gradient(165deg, #dc2626 0%, #991b1b 100%);
+  border: 3px solid #fca5a5;
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.4);
+}
+
+.player-result-icon {
+  font-size: 3.4rem;
+  margin-bottom: 6px;
+}
+
+.player-result-title {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.player-result-points {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--mphb-yellow);
+  padding: 6px 20px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.player-result-streak {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #fef08a;
+  margin-bottom: 8px;
+}
+
+.player-result-rank {
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 8px 16px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
 /* ==========================================================================
    MODALE & TOAST
    ========================================================================== */

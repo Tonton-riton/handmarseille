@@ -248,12 +248,17 @@
           </div>
 
           <div class="lobby-pin-actions">
-            <button type="button" class="btn-lobby-controller" id="btn-lobby-open-controller" title="Ouvre une manette joueur dans un nouvel onglet pour jouer en multi-écrans">
+            <button type="button" class="btn-lobby-controller" id="btn-lobby-open-controller" title="Ouvre une manette joueur dans un nouvel onglet pour rejoindre avec le Code PIN">
               📱 Ouvrir une Manette Joueur
             </button>
-            <button type="button" class="btn-lobby-new-pin" id="btn-lobby-regenerate-pin" title="Générer un nouveau Code PIN">
-              🔄 Nouveau PIN
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-lobby-new-pin" id="btn-lobby-clear-players" title="Vider la salle d'attente pour repartir à 0 participant">
+                🧹 Vider la salle
+              </button>
+              <button type="button" class="btn-lobby-new-pin" id="btn-lobby-regenerate-pin" title="Générer un nouveau Code PIN">
+                🔄 Nouveau PIN
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1191,7 +1196,7 @@
           </form>
         </div>
 
-        <!-- Étape 2 : Télécommande à 4 boutons géants (▲ ◆ ● ■) -->
+        <!-- Étape 2 : Salle d'attente Participant + Télécommande à 4 boutons + Résultat en direct -->
         <div id="player-step-pad" class="player-step-pad hidden">
           <div class="player-topbar">
             <span class="player-name-tag" id="player-pad-name">🦁 Équipe</span>
@@ -1200,11 +1205,24 @@
           </div>
 
           <div class="player-status-banner" id="player-pad-status">
-            👀 Regarde la question sur l'écran principal et appuie sur la bonne forme !
+            ⏳ Tu es inscrit dans la salle d'attente ! Regarde ton pseudo sur l'écran de l'animateur.
           </div>
 
-          <!-- Les 4 boutons géants de la manette -->
-          <div class="player-pad-grid" id="player-pad-buttons">
+          <!-- Vue A : Salle d'attente sur le téléphone du participant -->
+          <div id="player-view-waiting" class="player-waiting-box">
+            <div class="player-waiting-avatar" id="player-waiting-avatar">🦁</div>
+            <h2 class="player-waiting-title" id="player-waiting-nickname">Pseudo</h2>
+            <p class="player-waiting-text">
+              ✅ <strong>Tu es dans la partie !</strong><br />
+              Vois-tu ton pseudo sur l'écran principal ? L'animateur va bientôt lancer la 1re question...
+            </p>
+            <button type="button" class="btn-small-outline" id="btn-player-force-pad" style="margin-top:12px;">
+              🎮 La question est déjà affichée ? Ouvrir les 4 boutons
+            </button>
+          </div>
+
+          <!-- Vue B : Les 4 boutons géants de la manette pendant la question -->
+          <div class="player-pad-grid hidden" id="player-pad-buttons">
             <button type="button" class="player-pad-btn k-red" data-pad-idx="0" aria-label="Triangle Rouge">
               <span class="pad-shape">▲</span>
             </button>
@@ -1217,6 +1235,22 @@
             <button type="button" class="player-pad-btn k-green" data-pad-idx="3" aria-label="Carré Vert">
               <span class="pad-shape">■</span>
             </button>
+          </div>
+
+          <!-- Vue C : Réponse verrouillée en attente du gong -->
+          <div id="player-view-locked" class="player-locked-box hidden">
+            <div class="player-locked-spinner">⚡</div>
+            <h2 class="player-locked-title" id="player-locked-choice-label">Réponse enregistrée !</h2>
+            <p class="player-locked-sub">Es-tu assez rapide pour prendre la 1re place ? En attente du résultat...</p>
+          </div>
+
+          <!-- Vue D : Résultat personnel & Classement après la question -->
+          <div id="player-view-result" class="player-result-box hidden">
+            <div class="player-result-icon" id="player-result-icon">🎉</div>
+            <h2 class="player-result-title" id="player-result-title">CORRECT !</h2>
+            <div class="player-result-points" id="player-result-points">+950 pts</div>
+            <div class="player-result-streak" id="player-result-streak">🔥 Série de 2 bonnes réponses</div>
+            <div class="player-result-rank" id="player-result-rank">🏆 Tu es 1er au classement !</div>
           </div>
         </div>
       </div>

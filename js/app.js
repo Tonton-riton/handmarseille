@@ -79,7 +79,7 @@
       timerSeconds: 20,
       shuffleQuestions: true,
       gameMode: "individual", // "individual" | "teams"
-      teamVoteMode: "turn",   // "turn" (Tour par tour) | "all" (Toutes les équipes votent)
+      teamVoteMode: "all",    // "all" (Tous les participants votent) | "turn" (Tour par tour)
       playerName: ""
     },
 
@@ -89,13 +89,14 @@
       questionsList: [],
       currentIndex: 0,
       answered: false,
-      score: 0,           // Score Kahoot en points (ex: 8450)
-      streak: 0,          // Série de bonnes réponses consécutives
+      score: 0,
+      lastEarnedPoints: 0,
+      streak: 0,
       correctCount: 0,
       wrongCount: 0,
       activeTeamIndex: 0,
       selectedVoterTeamIdx: 0,
-      teamVotes: {},      // { teamIndex: { choice: 0..3, timeMs: 1200 } }
+      teamVotes: {},
       voteCounts: [0, 0, 0, 0],
       questionStartTime: 0,
       timerTotal: 20,
@@ -114,7 +115,8 @@
       avatar: "🦁",
       teamId: null,
       score: 0,
-      lockedChoice: null
+      lockedChoice: null,
+      questionStartTime: 0
     },
 
     quizEditorSelectedIds: []
@@ -584,7 +586,7 @@
     document.getElementById("btn-start-quiz").addEventListener("click", function () {
       window.MPHB_SOUND.playClick();
       if (state.config.gameMode === "teams") {
-        openTeamsKickoffModal();
+        openKahootLobby();
       } else {
         startConfiguredQuiz();
       }
@@ -624,14 +626,23 @@
   }
 
   // ==========================================================================
-  // 6. LOBBY KAHOOT AVEC CODE PIN & MUSIQUE
+  // 6. SALLE D'ATTENTE DES PARTICIPANTS (LOBBY CODE PIN & MUSIQUE)
   // ==========================================================================
   function openKahootLobby() {
     state.config.gameMode = "teams";
+    state.config.teamVoteMode = "all";
     saveConfig();
     renderLobbyScreen();
     showScreen("screen-lobby");
     window.MPHB_SOUND.startLobbyMusic();
+
+    var built = buildQuestionsForSession();
+    broadcastLiveEvent({
+      type: "HOST_OPEN_LOBBY",
+      pin: state.gamePin,
+      quizTitle: built.title,
+      participants: state.teams
+    });
   }
 
   function renderLobbyScreen() {
@@ -641,33 +652,45 @@
       cleanBuiltTitle + " (" + built.list.length + " questions)";
     document.getElementById("lobby-pin-code").textContent = state.gamePin;
 
-    var countLabel = state.teams.length + " Équipe" + (state.teams.length > 1 ? "s" : "") + " / Joueur" + (state.teams.length > 1 ? "s" : "") + " prêt" + (state.teams.length > 1 ? "s" : "");
+    var n = state.teams.length;
+    var countLabel = n + " Participant" + (n > 1 ? "s" : "") + " dans la salle d'attente";
     document.getElementById("lobby-players-count").textContent = countLabel;
 
     var grid = document.getElementById("lobby-players-grid");
     var html = "";
-    state.teams.forEach(function (t, idx) {
-      var av = t.avatar || "🤾";
-      html +=
-        '<div class="lobby-player-badge" data-remove-lobby-idx="' + idx + '" title="Cliquer pour retirer">' +
-          '<span>' + av + '</span>' +
-          '<span>' + escapeHtml(t.name) + '</span>' +
+    if (n === 0) {
+      html =
+        '<div class="lobby-empty-waiting">' +
+          '<div class="lobby-empty-pulse">⏳</div>' +
+          '<h3>En attente des participants...</h3>' +
+          '<p>Rejoignez avec le CODE PIN <strong>' + escapeHtml(state.gamePin) + '</strong> via le bouton « 📱 Manette Joueur » ou ajoutez des participants ci-dessus !</p>' +
         '</div>';
-    });
+    } else {
+      state.teams.forEach(function (t, idx) {
+        var av = t.avatar || "🤾";
+        html +=
+          '<div class="lobby-player-badge" data-remove-lobby-idx="' + idx + '" title="Cliquer pour retirer ce participant">' +
+            '<span>' + av + '</span>' +
+            '<span>' + escapeHtml(t.name) + '</span>' +
+            '<span style="font-size:0.75rem; opacity:0.55; margin-left:4px;">✖</span>' +
+          '</div>';
+      });
+    }
     grid.innerHTML = html;
 
     var badges = grid.querySelectorAll(".lobby-player-badge");
     for (var i = 0; i < badges.length; i++) {
       badges[i].addEventListener("click", function () {
-        if (state.teams.length <= 2) {
-          showToast("Gardez au moins 2 équipes pour jouer en mode Équipes !");
-          return;
-        }
         var idx = parseInt(this.getAttribute("data-remove-lobby-idx"), 10);
         var removed = state.teams.splice(idx, 1)[0];
         saveTeams();
         renderLobbyScreen();
-        showToast("👋 " + (removed ? removed.name : "Équipe") + " retirée du Lobby.");
+        broadcastLiveEvent({
+          type: "HOST_SYNC_PARTICIPANTS",
+          pin: state.gamePin,
+          participants: state.teams
+        });
+        showToast("👋 " + (removed ? removed.name : "Participant") + " retiré de la salle d'attente.");
       });
     }
   }
@@ -680,15 +703,42 @@
       var name = nameInput.value.trim();
       if (!name) return;
 
-      addTeamWithDetails(name, avatarInput.value || "🤾");
+      var added = addTeamWithDetails(name, avatarInput.value || "🤾");
       nameInput.value = "";
       window.MPHB_SOUND.playPlayerJoin();
       renderLobbyScreen();
+      if (added) {
+        broadcastLiveEvent({
+          type: "HOST_SYNC_PARTICIPANTS",
+          pin: state.gamePin,
+          participants: state.teams
+        });
+      }
     });
+
+    var clearBtn = document.getElementById("btn-lobby-clear-players");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () {
+        state.teams = [];
+        saveTeams();
+        renderLobbyScreen();
+        broadcastLiveEvent({
+          type: "HOST_SYNC_PARTICIPANTS",
+          pin: state.gamePin,
+          participants: []
+        });
+        showToast("🧹 Salle d'attente vidée ! Prête pour les nouveaux participants.");
+      });
+    }
 
     document.getElementById("btn-lobby-regenerate-pin").addEventListener("click", function () {
       generateNewPin();
       renderLobbyScreen();
+      broadcastLiveEvent({
+        type: "HOST_OPEN_LOBBY",
+        pin: state.gamePin,
+        participants: state.teams
+      });
       showToast("🔄 Nouveau Code PIN généré : " + state.gamePin);
     });
 
@@ -699,13 +749,25 @@
 
     document.getElementById("btn-lobby-start-game").addEventListener("click", function () {
       window.MPHB_SOUND.stopMusic();
+      if (state.teams.length === 0) {
+        addTeamWithDetails("Joueur 1 MPHB", "🦁");
+      }
+      // Remettre les scores à 0 au lancement d'une nouvelle partie depuis la salle d'attente
+      state.teams.forEach(function (t) {
+        t.score = 0;
+        t.correct = 0;
+        t.streak = 0;
+        t.lastDelta = 0;
+        t.prevRank = 0;
+      });
+      saveTeams();
       startConfiguredQuiz();
     });
   }
 
   function addTeamWithDetails(name, avatar) {
-    if (state.teams.length >= 12) {
-      showToast("Maximum 12 équipes / joueurs dans le Lobby !");
+    if (state.teams.length >= 25) {
+      showToast("Maximum 25 participants dans la salle !");
       return null;
     }
     var idx = state.teams.length + 1;
@@ -717,6 +779,7 @@
       correct: 0,
       streak: 0,
       lastDelta: 0,
+      prevRank: idx,
       color: TEAM_COLORS[(idx - 1) % TEAM_COLORS.length]
     };
     state.teams.push(newTeam);
@@ -726,13 +789,37 @@
   }
 
   // ==========================================================================
-  // 7. MANETTE JOUEUR KAHOOT & SYNCHRONISATION MULTI-ONGLETS
+  // 7. MANETTE PARTICIPANT & SYNCHRONISATION TEMPS RÉEL (SALLE D'ATTENTE -> JEU)
   // ==========================================================================
+  function setPlayerPadView(viewName) {
+    var views = {
+      waiting: document.getElementById("player-view-waiting"),
+      pad: document.getElementById("player-pad-buttons"),
+      locked: document.getElementById("player-view-locked"),
+      result: document.getElementById("player-view-result")
+    };
+    Object.keys(views).forEach(function (k) {
+      if (views[k]) {
+        if (k === viewName) views[k].classList.remove("hidden");
+        else views[k].classList.add("hidden");
+      }
+    });
+  }
+
   function bindPlayerControllerEvents() {
+    var forcePadBtn = document.getElementById("btn-player-force-pad");
+    if (forcePadBtn) {
+      forcePadBtn.addEventListener("click", function () {
+        state.playerPad.questionStartTime = Date.now();
+        setPlayerPadView("pad");
+        document.getElementById("player-pad-status").textContent =
+          "👀 Regarde la question sur l'écran principal et appuie sur la bonne forme !";
+      });
+    }
+
     document.getElementById("form-player-join").addEventListener("submit", function (e) {
       e.preventDefault();
       var enteredPin = document.getElementById("player-pin-input").value.replace(/\s+/g, "");
-      var hostPin = state.gamePin.replace(/\s+/g, "");
       var nickname = document.getElementById("player-nickname-input").value.trim();
       var avatar = document.getElementById("player-avatar-input").value || "🦁";
 
@@ -740,37 +827,76 @@
         showToast("⚠️ Entre ton pseudo ou nom d'équipe !");
         return;
       }
-      if (enteredPin && enteredPin !== hostPin) {
-        showToast("⚠️ Code PIN différent du PIN actif (" + state.gamePin + "), connexion automatique au PIN actif !");
+
+      function completeJoin(activePin, roomPhase) {
+        var existing = state.teams.find(function (t) {
+          return t.name.toLowerCase() === nickname.toLowerCase();
+        });
+        var teamObj = existing || addTeamWithDetails(nickname, avatar);
+        if (!teamObj) teamObj = state.teams[0];
+
+        state.playerPad.joined = true;
+        state.playerPad.pin = activePin;
+        state.playerPad.name = teamObj.name;
+        state.playerPad.avatar = avatar;
+        state.playerPad.teamId = teamObj.id;
+        state.playerPad.score = teamObj.score || 0;
+        state.playerPad.lockedChoice = null;
+        state.playerPad.questionStartTime = Date.now();
+
+        document.getElementById("player-step-join").classList.add("hidden");
+        document.getElementById("player-step-pad").classList.remove("hidden");
+        document.getElementById("player-pad-name").textContent = avatar + " " + teamObj.name;
+        document.getElementById("player-pad-pin").textContent = "PIN : " + activePin;
+        document.getElementById("player-pad-score").textContent = state.playerPad.score + " pts";
+
+        var wAv = document.getElementById("player-waiting-avatar");
+        var wNick = document.getElementById("player-waiting-nickname");
+        if (wAv) wAv.textContent = avatar;
+        if (wNick) wNick.textContent = teamObj.name;
+
+        if (roomPhase === "question") {
+          setPlayerPadView("pad");
+          document.getElementById("player-pad-status").textContent =
+            "👀 Question en cours : Appuie vite sur la bonne forme (▲ ◆ ● ■) !";
+        } else {
+          setPlayerPadView("waiting");
+          document.getElementById("player-pad-status").textContent =
+            "⏳ Salle d'attente : En attente du lancement par l'animateur...";
+        }
+
+        window.MPHB_SOUND.playPlayerJoin();
+        broadcastLiveEvent({
+          type: "PLAYER_JOINED",
+          team: teamObj
+        });
+        showToast("🎉 Tu as rejoint la salle d'attente !");
       }
 
-      // Vérifier si l'équipe existe déjà ou l'ajouter
-      var existing = state.teams.find(function (t) {
-        return t.name.toLowerCase() === nickname.toLowerCase();
-      });
-      var teamObj = existing || addTeamWithDetails(nickname, avatar);
-      if (!teamObj) teamObj = state.teams[0];
-
-      state.playerPad.joined = true;
-      state.playerPad.pin = state.gamePin;
-      state.playerPad.name = teamObj.name;
-      state.playerPad.avatar = avatar;
-      state.playerPad.teamId = teamObj.id;
-      state.playerPad.score = teamObj.score || 0;
-      state.playerPad.lockedChoice = null;
-
-      document.getElementById("player-step-join").classList.add("hidden");
-      document.getElementById("player-step-pad").classList.remove("hidden");
-      document.getElementById("player-pad-name").textContent = avatar + " " + teamObj.name;
-      document.getElementById("player-pad-pin").textContent = "PIN : " + state.gamePin;
-      document.getElementById("player-pad-score").textContent = state.playerPad.score + " pts";
-
-      window.MPHB_SOUND.playPlayerJoin();
-      broadcastLiveEvent({
-        type: "PLAYER_JOINED",
-        team: teamObj
-      });
-      showToast("🎉 Connecté au Quiz MPHB !");
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        fetch("/api/room")
+          .then(function (r) { return r.json(); })
+          .then(function (room) {
+            var serverPin = (room && room.pin) ? room.pin : state.gamePin;
+            var cleanServerPin = serverPin.replace(/\s+/g, "");
+            if (enteredPin && enteredPin !== cleanServerPin) {
+              showToast("⚠️ Code PIN incorrect ! Le Code PIN actuel est : " + serverPin);
+              return;
+            }
+            state.gamePin = serverPin;
+            completeJoin(serverPin, room ? room.phase : "lobby");
+          })
+          .catch(function () {
+            completeJoin(state.gamePin, state.game.active ? "question" : "lobby");
+          });
+      } else {
+        var hostPin = state.gamePin.replace(/\s+/g, "");
+        if (enteredPin && enteredPin !== hostPin) {
+          showToast("⚠️ Code PIN incorrect ! Le Code PIN actuel est : " + state.gamePin);
+          return;
+        }
+        completeJoin(state.gamePin, state.game.active ? "question" : "lobby");
+      }
     });
 
     var padBtns = document.querySelectorAll("#player-pad-buttons .player-pad-btn");
@@ -783,20 +909,27 @@
   }
 
   function handlePlayerPadTap(choiceIdx) {
-    if (!state.playerPad.joined) return;
+    if (!state.playerPad.joined || state.playerPad.lockedChoice !== null) return;
     window.MPHB_SOUND.playClick();
     var shape = KAHOOT_SHAPES[choiceIdx];
+    var elapsedMs = Math.max(200, Date.now() - (state.playerPad.questionStartTime || Date.now()));
     state.playerPad.lockedChoice = choiceIdx;
 
+    var secStr = (elapsedMs / 1000).toFixed(1).replace(".", ",");
+    var lockedLbl = document.getElementById("player-locked-choice-label");
+    if (lockedLbl) {
+      lockedLbl.textContent = shape.symbol + " " + shape.name + " (en " + secStr + " s)";
+    }
+    setPlayerPadView("locked");
     document.getElementById("player-pad-status").innerHTML =
-      "✅ Réponse envoyée : <strong>" + shape.symbol + " " + shape.name + "</strong> ! Regarde l'écran principal...";
+      "⚡ Réponse verrouillée en <strong>" + secStr + " sec</strong> ! En attente du résultat...";
 
-    // Si on est sur le même onglet ou en multi-onglets, transmettre le vote
     broadcastLiveEvent({
       type: "PLAYER_VOTE",
       teamId: state.playerPad.teamId,
       teamName: state.playerPad.name,
-      choiceIndex: choiceIdx
+      choiceIndex: choiceIdx,
+      elapsedMs: elapsedMs
     });
   }
 
@@ -822,52 +955,102 @@
     function onMessage(data) {
       if (!data || !data.type) return;
 
+      if (data.type === "ROOM_SYNC" && data.room) {
+        if (data.room.pin) state.gamePin = data.room.pin;
+      }
+
+      if (data.type === "HOST_OPEN_LOBBY" && state.playerPad.joined) {
+        setPlayerPadView("waiting");
+        document.getElementById("player-pad-status").textContent =
+          "⏳ En salle d'attente : L'animateur prépare le lancement...";
+      }
+
       if (data.type === "PLAYER_JOINED" && data.team) {
-        var exists = state.teams.some(function (t) { return t.id === data.team.id || t.name === data.team.name; });
+        var exists = state.teams.some(function (t) {
+          return t.id === data.team.id || t.name.toLowerCase() === data.team.name.toLowerCase();
+        });
         if (!exists) {
           state.teams.push(data.team);
           saveTeams();
         }
         window.MPHB_SOUND.playPlayerJoin();
         refreshAllUI();
-        showToast("📱 " + data.team.name + " a rejoint le Lobby !");
+        showToast("📱 " + data.team.name + " a rejoint la salle d'attente !");
       }
 
       if (data.type === "PLAYER_VOTE" && state.game.active && !state.game.answered) {
         var tIdx = state.teams.findIndex(function (t) {
-          return t.id === data.teamId || t.name === data.teamName;
+          return t.id === data.teamId || t.name.toLowerCase() === String(data.teamName || "").toLowerCase();
         });
+        if (tIdx === -1 && data.teamName) {
+          var newP = addTeamWithDetails(data.teamName, "🤾");
+          if (newP) tIdx = state.teams.length - 1;
+        }
         if (tIdx !== -1) {
           if (state.config.gameMode === "teams" && state.config.teamVoteMode === "all") {
-            registerTeamVoteInAllMode(tIdx, data.choiceIndex);
+            registerTeamVoteInAllMode(tIdx, data.choiceIndex, data.elapsedMs);
           } else {
-            // Si c'est le tour de cette équipe ou en mode direct, valider la réponse
-            handleAnswerSelection(data.choiceIndex);
+            handleAnswerSelection(data.choiceIndex, data.elapsedMs);
           }
         }
       }
 
+      if (data.type === "HOST_COUNTDOWN" && state.playerPad.joined) {
+        state.playerPad.lockedChoice = null;
+        setPlayerPadView("waiting");
+        document.getElementById("player-pad-status").textContent =
+          "🚀 Prépare-toi ! Question " + data.qNum + " sur " + data.total + " arrive...";
+      }
+
       if (data.type === "HOST_NEW_QUESTION" && state.playerPad.joined) {
         state.playerPad.lockedChoice = null;
+        state.playerPad.questionStartTime = Date.now();
+        setPlayerPadView("pad");
         document.getElementById("player-pad-status").textContent =
-          "👀 Question " + data.qNum + " : Appuie sur la bonne forme (▲ ◆ ● ■) !";
+          "👀 Question " + data.qNum + " : Appuie vite sur la bonne forme (▲ ◆ ● ■) !";
       }
 
       if (data.type === "HOST_REVEAL" && state.playerPad.joined) {
-        var myTeam = (data.teams || []).find(function (t) {
-          return t.id === state.playerPad.teamId || t.name === state.playerPad.name;
+        var sortedTeams = (data.teams || []).slice().sort(function (a, b) {
+          return b.score - a.score;
         });
+        var myRank = 1;
+        var myTeam = null;
+        sortedTeams.forEach(function (t, idx) {
+          if (t.id === state.playerPad.teamId || t.name.toLowerCase() === state.playerPad.name.toLowerCase()) {
+            myTeam = t;
+            myRank = idx + 1;
+          }
+        });
+
         if (myTeam) {
-          document.getElementById("player-pad-score").textContent = myTeam.score + " pts";
+          state.playerPad.score = myTeam.score;
+          document.getElementById("player-pad-score").textContent = formatPoints(myTeam.score) + " pts";
         }
+
+        var isRight = state.playerPad.lockedChoice === data.correctIndex;
+        var resBox = document.getElementById("player-view-result");
+        resBox.classList.remove("result-win", "result-lose");
+        resBox.classList.add(isRight ? "result-win" : "result-lose");
+
+        document.getElementById("player-result-icon").textContent = isRight ? "🎉" : "💪";
+        document.getElementById("player-result-title").textContent = isRight ? "CORRECT !" : "INCORRECT";
+        var deltaPts = (myTeam && myTeam.lastDelta) ? myTeam.lastDelta : 0;
+        document.getElementById("player-result-points").textContent = isRight
+          ? ("+" + formatPoints(deltaPts) + " points")
+          : "+0 point";
+        var streakCount = (myTeam && myTeam.streak) ? myTeam.streak : 0;
+        document.getElementById("player-result-streak").textContent = streakCount >= 2
+          ? ("🔥 Série en feu : " + streakCount + " bonnes réponses d'affilée !")
+          : (isRight ? "⭐ Continue comme ça !" : "💡 Regarde l'explication sur l'écran principal !");
+        document.getElementById("player-result-rank").textContent =
+          "🏆 Classement : Tu es " + myRank + (myRank === 1 ? "er" : "e") + " (" + formatPoints(state.playerPad.score) + " pts)";
+
+        setPlayerPadView("result");
         var goodShape = KAHOOT_SHAPES[data.correctIndex];
-        if (state.playerPad.lockedChoice === data.correctIndex) {
-          document.getElementById("player-pad-status").innerHTML =
-            "🎉 <strong>BRAVO ! Bonne réponse (" + goodShape.symbol + ") !</strong>";
-        } else {
-          document.getElementById("player-pad-status").innerHTML =
-            "💡 La bonne réponse était <strong>" + goodShape.symbol + " " + goodShape.name + "</strong> !";
-        }
+        document.getElementById("player-pad-status").innerHTML = isRight
+          ? "🎉 <strong>BRAVO ! +" + formatPoints(deltaPts) + " pts !</strong>"
+          : "💡 La bonne réponse était <strong>" + goodShape.symbol + " " + goodShape.name + "</strong>";
       }
     }
 
@@ -1076,8 +1259,15 @@
     document.getElementById("k-cd-category").textContent = cat.icon + " " + cat.name;
     document.getElementById("k-cd-qnum").textContent = "Question " + num + " sur " + total;
     document.getElementById("k-cd-points-tag").textContent = isDoublePoints
-      ? "🔥 POINTS DOUBLES ×2 (JUSQU'À 2000 POINTS !)"
-      : "⚡ JUSQU'À 1000 POINTS (BONUS DE VITESSE & SÉRIE)";
+      ? "🔥 POINTS DOUBLES ×2 (JUSQU'À 2000 POINTS + SÉRIE !)"
+      : "⚡ JUSQU'À 1000 POINTS (FORMULE VITESSE + BONUS SÉRIE)";
+
+    broadcastLiveEvent({
+      type: "HOST_COUNTDOWN",
+      qNum: num,
+      total: total,
+      isDoublePoints: isDoublePoints
+    });
 
     var numBox = document.getElementById("k-cd-number");
     overlay.classList.remove("hidden");
@@ -1139,11 +1329,19 @@
     var cat = getCategoryById(q.category);
     var isDouble = isCurrentQuestionDoublePoints();
 
-    // Notifier les éventuelles manettes joueurs connectées
+    // Enregistrer le rang précédent de chaque participant avant la question (pour afficher "+X places" au classement)
+    var sortedBefore = state.teams.slice().sort(function (a, b) { return b.score - a.score; });
+    sortedBefore.forEach(function (t, rIdx) {
+      t.prevRank = rIdx + 1;
+    });
+
+    // Notifier les manettes joueurs connectées que la question est ouverte !
     broadcastLiveEvent({
       type: "HOST_NEW_QUESTION",
       qNum: num,
-      total: total
+      total: total,
+      timerSeconds: state.config.timerSeconds || 20,
+      isDoublePoints: isDouble
     });
 
     // 1. Barre supérieure Kahoot
@@ -1180,24 +1378,24 @@
     var multiVoteBar = document.getElementById("multi-team-vote-bar");
     var leaderboardCard = document.getElementById("live-leaderboard-card");
 
-    if (state.config.gameMode === "teams" && state.teams.length >= 2) {
+    if (state.config.gameMode === "teams" && state.teams.length >= 1) {
       teamBanner.classList.remove("hidden");
       leaderboardCard.classList.remove("hidden");
       renderLiveTeamLeaderboard();
 
       var switchBtn = document.getElementById("btn-toggle-team-vote-mode");
       if (state.config.teamVoteMode === "all") {
-        switchBtn.textContent = "🔄 Mode : Toutes les équipes votent";
-        document.getElementById("team-mode-badge-label").textContent = "🗳️ VOTE DE TOUTES LES ÉQUIPES";
-        document.getElementById("active-team-name").textContent = "Chaque équipe choisit sa forme (▲ ◆ ● ■)";
-        document.getElementById("active-team-score-pill").textContent = state.teams.length + " équipes";
+        switchBtn.textContent = "🔄 Mode : Tous les participants votent";
+        document.getElementById("team-mode-badge-label").textContent = "🗳️ VOTE DES PARTICIPANTS EN DIRECT";
+        document.getElementById("active-team-name").textContent = "Répondez sur vos appareils ou cliquez votre nom ci-dessous !";
+        document.getElementById("active-team-score-pill").textContent = state.teams.length + " participant(s)";
         multiVoteBar.classList.remove("hidden");
         renderMultiTeamVoteChips();
       } else {
         switchBtn.textContent = "🔄 Mode : Tour par tour";
         g.activeTeamIndex = g.currentIndex % state.teams.length;
         var currentTeam = state.teams[g.activeTeamIndex];
-        document.getElementById("team-mode-badge-label").textContent = "📢 AU TOUR DE L'ÉQUIPE";
+        document.getElementById("team-mode-badge-label").textContent = "📢 AU TOUR DE";
         document.getElementById("active-team-name").textContent = (currentTeam.avatar || "🤾") + " " + currentTeam.name;
         document.getElementById("active-team-score-pill").textContent = formatPoints(currentTeam.score) + " pts";
         multiVoteBar.classList.add("hidden");
@@ -1299,14 +1497,18 @@
     }
   }
 
-  function registerTeamVoteInAllMode(teamIdx, choiceIdx) {
+  function registerTeamVoteInAllMode(teamIdx, choiceIdx, customElapsedMs) {
     var g = state.game;
     if (g.answered || !state.teams[teamIdx]) return;
 
     window.MPHB_SOUND.playClick();
+    var elapsed = customElapsedMs !== undefined
+      ? Math.max(150, Number(customElapsedMs) || 500)
+      : Math.max(200, Date.now() - g.questionStartTime);
+
     g.teamVotes[teamIdx] = {
       choice: choiceIdx,
-      elapsedMs: Math.max(200, Date.now() - g.questionStartTime)
+      elapsedMs: elapsed
     };
 
     var totalVotes = Object.keys(g.teamVotes).length;
@@ -1323,7 +1525,7 @@
 
     renderMultiTeamVoteChips();
 
-    // Si toutes les équipes ont voté, révéler automatiquement après un court suspense !
+    // Si tous les participants ont voté, révéler automatiquement après un court suspense !
     if (totalVotes >= state.teams.length) {
       setTimeout(function () {
         if (!g.answered) revealMultiTeamVotes();
@@ -1331,19 +1533,23 @@
     }
   }
 
-  // Calcul officiel des points façon Kahoot! (Vitesse + Série)
-  function computeKahootPoints(elapsedMs, currentStreak) {
-    var baseMax = isCurrentQuestionDoublePoints() ? 2000 : 1000;
-    var speedPts = baseMax;
+  /**
+   * Formule officielle de distribution des points Kahoot! :
+   * 1) Points de vitesse : round((1 - (temps_reponse / temps_total / 2)) * 1000) -> entre 500 et 1000 pts (ou x2 en Points Doubles)
+   * 2) Bonus de série (Answer Streak) : +100 pts (2 de suite), +200 (3), +300 (4), +400 (5), +500 max (6+)
+   */
+  function computeKahootPoints(elapsedMs, previousStreakCount) {
+    var multiplier = isCurrentQuestionDoublePoints() ? 2 : 1;
+    var speedPts = 1000 * multiplier;
 
     if (state.config.timerEnabled) {
-      var totalMs = (state.config.timerSeconds || 20) * 1000;
+      var totalMs = Math.max(1000, (state.config.timerSeconds || 20) * 1000);
       var ratio = Math.min(1, Math.max(0, elapsedMs / totalMs));
-      // Entre 55% et 100% du score maximum selon la rapidité
-      speedPts = Math.round(baseMax * (1 - ratio * 0.45));
+      // Formule officielle : (1 - (ratio / 2)) * 1000
+      speedPts = Math.round((1 - ratio / 2) * 1000 * multiplier);
     }
 
-    var streakBonus = Math.min(500, Math.max(0, currentStreak) * 100);
+    var streakBonus = Math.min(500, Math.max(0, previousStreakCount) * 100);
     return speedPts + streakBonus;
   }
 
@@ -1404,7 +1610,7 @@
     }
   }
 
-  // Révélation en mode "Toutes les équipes votent"
+  // Révélation en mode "Tous les participants votent"
   function revealMultiTeamVotes() {
     var g = state.game;
     if (g.answered) return;
@@ -1418,6 +1624,7 @@
 
     var anyTeamCorrect = false;
     var winnersNames = [];
+    var bestEarnedOnQ = 0;
 
     state.teams.forEach(function (team, idx) {
       var vote = g.teamVotes[idx];
@@ -1430,7 +1637,8 @@
           team.score += pts;
           team.lastDelta = pts;
           team.correct = (team.correct || 0) + 1;
-          winnersNames.push(team.name + " (+" + pts + ")");
+          if (pts > bestEarnedOnQ) bestEarnedOnQ = pts;
+          winnersNames.push(team.name + " (+" + formatPoints(pts) + " pts)");
         } else {
           team.streak = 0;
           team.lastDelta = 0;
@@ -1442,9 +1650,11 @@
     });
     saveTeams();
 
+    g.lastEarnedPoints = bestEarnedOnQ;
+
     if (anyTeamCorrect) {
       g.correctCount++;
-      g.score += 1000;
+      g.score += bestEarnedOnQ;
       setTimeout(function () {
         window.MPHB_SOUND.playCorrect();
         window.MPHB_FX.burstMini();
@@ -1466,15 +1676,15 @@
       correctIndex: correctIdx,
       isCorrect: anyTeamCorrect,
       explanation: q.explanation,
-      teamName: winnersNames.length > 0 ? ("Gagnants : " + winnersNames.join(", ")) : "Aucune équipe"
+      teamName: winnersNames.length > 0 ? ("Gagnants : " + winnersNames.join(", ")) : "Aucun participant"
     });
 
     showKahootFeedbackPanel(
       anyTeamCorrect,
       correctIdx,
       q,
-      winnersNames.length > 0 ? ("🎉 Bravo à : " + winnersNames.join(" • ")) : "💪 Aucune équipe n'a trouvé cette fois, regardons l'explication !",
-      winnersNames.length > 0 ? ("+" + winnersNames.length + " équipe(s)") : "+0 pt"
+      winnersNames.length > 0 ? ("🎉 Bonne réponse de : " + winnersNames.join(" • ")) : "💪 Personne n'a trouvé cette fois, regardons l'explication !",
+      winnersNames.length > 0 ? ("Jusqu'à +" + formatPoints(bestEarnedOnQ) + " pts") : "+0 pt"
     );
 
     renderLiveTeamLeaderboard();
@@ -1486,13 +1696,15 @@
   }
 
   // Validation immédiate (Mode Individuel ou Mode Équipes Tour par Tour)
-  function handleAnswerSelection(chosenIndex) {
+  function handleAnswerSelection(chosenIndex, customElapsedMs) {
     var g = state.game;
     if (g.answered) return;
     g.answered = true;
     stopQuestionTimer();
 
-    var elapsedMs = Math.max(200, Date.now() - g.questionStartTime);
+    var elapsedMs = customElapsedMs !== undefined
+      ? Math.max(150, Number(customElapsedMs) || 500)
+      : Math.max(200, Date.now() - g.questionStartTime);
     var q = g.questionsList[g.currentIndex];
     var correctIdx = q.correctIndex;
     var isCorrect = chosenIndex === correctIdx;
@@ -1542,6 +1754,8 @@
       window.MPHB_SOUND.playWrong();
     }
 
+    g.lastEarnedPoints = earnedPoints;
+
     g.historyLog.push({
       question: q.question,
       options: q.options,
@@ -1580,9 +1794,11 @@
       ? ((activeTeam ? activeTeam.name + " : " : "") + msgObj.title)
       : (chosenIndex === -1 ? "⏱️ Temps écoulé ! Regardons ensemble la bonne réponse :" : msgObj.title);
 
+    var secStr = (elapsedMs / 1000).toFixed(1).replace(".", ",");
+    var streakBonusPts = isCorrect ? Math.min(500, Math.max(0, (activeTeam ? activeTeam.streak : g.streak) - 1) * 100) : 0;
     var ptsLabel = isCorrect
-      ? ("+" + formatPoints(earnedPoints) + " pts" + (g.streak >= 2 ? " (🔥 Série x" + g.streak + ")" : ""))
-      : "+0 pt (On apprend !)";
+      ? ("+" + formatPoints(earnedPoints) + " pts (" + secStr + "s" + (streakBonusPts > 0 ? " • 🔥 Bonus Série +" + streakBonusPts : "") + ")")
+      : "+0 pt";
 
     showKahootFeedbackPanel(isCorrect, correctIdx, q, customTitle, ptsLabel, msgObj.emoji);
 
@@ -1622,7 +1838,6 @@
   }
 
   function showKahootFeedbackPanel(isCorrect, correctIdx, q, titleText, ptsText, emojiOverride) {
-    // Masquer l'illustration pour afficher le graphique Kahoot + l'explication pédagogique au centre
     document.getElementById("question-illustration-wrapper").classList.add("hidden");
 
     var fbPanel = document.getElementById("feedback-panel");
@@ -1641,13 +1856,11 @@
     var nextBtn = document.getElementById("btn-next-question");
     nextBtn.classList.remove("hidden");
 
-    var isLast = state.game.currentIndex >= state.game.questionsList.length - 1;
-    document.getElementById("btn-next-label").textContent = isLast
-      ? "PODIUM FINAL 🏆"
-      : (state.config.gameMode === "teams" ? "SCOREBOARD ➔" : "SUIVANT ➔");
+    // Après CHAQUE question, on affiche le bouton "VOIR LE CLASSEMENT ➔"
+    document.getElementById("btn-next-label").textContent = "CLASSEMENT 🏆";
   }
 
-  // Affichage du Tableau des Scores Intermédiaire Kahoot entre deux questions
+  // Affichage systématique du Classement / Tableau des Scores après CHAQUE question !
   function showIntermediateKahootScoreboard() {
     var g = state.game;
     g.showingScoreboard = true;
@@ -1656,37 +1869,77 @@
     var overlay = document.getElementById("kahoot-scoreboard-overlay");
     overlay.classList.remove("hidden");
 
-    var sorted = state.teams.slice().sort(function (a, b) {
-      return b.score - a.score;
+    var isLast = g.currentIndex >= g.questionsList.length - 1;
+    var sbNextLbl = document.getElementById("btn-sb-next-label");
+    if (sbNextLbl) {
+      sbNextLbl.textContent = isLast ? "VOIR LE PODIUM FINAL 🏆" : "QUESTION SUIVANTE";
+    }
+
+    var participantsToDisplay = [];
+    if (state.config.gameMode === "teams" && state.teams.length >= 1) {
+      participantsToDisplay = state.teams.slice().sort(function (a, b) {
+        return b.score - a.score;
+      });
+    } else {
+      // Mode Individuel : afficher la progression et le score du joueur solo
+      participantsToDisplay = [
+        {
+          id: "solo",
+          name: state.config.playerName || "Joueur MPHB",
+          avatar: "🤾",
+          score: g.score,
+          lastDelta: g.lastEarnedPoints || 0,
+          streak: g.streak || 0,
+          prevRank: 1
+        }
+      ];
+    }
+
+    broadcastLiveEvent({
+      type: "HOST_SCOREBOARD",
+      teams: participantsToDisplay
     });
 
-    // Trouver la meilleure série en cours
+    // Trouver la meilleure série ou la plus forte progression
     var bestStreakTeam = null;
-    sorted.forEach(function (t) {
+    var biggestClimber = null;
+    participantsToDisplay.forEach(function (t, idx) {
+      var currentRank = idx + 1;
+      var climbed = (t.prevRank && t.prevRank > currentRank) ? (t.prevRank - currentRank) : 0;
+      t.climbedPlaces = climbed;
+      if (climbed > 0 && (!biggestClimber || climbed > biggestClimber.climbedPlaces)) {
+        biggestClimber = t;
+      }
       if ((t.streak || 0) >= 2 && (!bestStreakTeam || t.streak > bestStreakTeam.streak)) {
         bestStreakTeam = t;
       }
     });
 
     var streakBanner = document.getElementById("k-sb-streak-banner");
-    if (bestStreakTeam) {
+    if (biggestClimber) {
+      streakBanner.textContent =
+        "🚀 " + biggestClimber.name + " remonte de +" + biggestClimber.climbedPlaces + " place" + (biggestClimber.climbedPlaces > 1 ? "s" : "") + " au classement !";
+    } else if (bestStreakTeam) {
       streakBanner.textContent =
         "🔥 " + bestStreakTeam.name + " est en feu avec une série de " + bestStreakTeam.streak + " bonnes réponses d'affilée !";
-    } else if (sorted[0]) {
+    } else if (participantsToDisplay[0]) {
       streakBanner.textContent =
-        "🏆 " + sorted[0].name + " mène la course en tête avec " + formatPoints(sorted[0].score) + " points !";
+        "🏆 " + participantsToDisplay[0].name + " est en tête du classement avec " + formatPoints(participantsToDisplay[0].score) + " points !";
     }
 
     var medals = ["🥇 1er", "🥈 2e", "🥉 3e"];
     var listEl = document.getElementById("k-scoreboard-list");
     var html = "";
-    sorted.forEach(function (t, idx) {
+    participantsToDisplay.forEach(function (t, idx) {
       var rankLabel = medals[idx] || ((idx + 1) + "e");
+      var climbHtml = t.climbedPlaces > 0
+        ? '<span class="k-sb-delta" style="background:rgba(56,189,248,0.22); color:#38bdf8; border-color:rgba(56,189,248,0.4);">🚀 +' + t.climbedPlaces + ' place' + (t.climbedPlaces > 1 ? 's' : '') + '</span>'
+        : '';
       var deltaHtml = t.lastDelta > 0
         ? '<span class="k-sb-delta">🔼 +' + formatPoints(t.lastDelta) + ' pts</span>'
-        : '';
+        : '<span style="font-size:0.8rem; color:#94a3b8;">+0 pt</span>';
       var streakHtml = (t.streak || 0) >= 2
-        ? '<span class="k-streak-pill" style="font-size:0.78rem;">🔥 x' + t.streak + '</span>'
+        ? '<span class="k-streak-pill" style="font-size:0.78rem;">🔥 Série x' + t.streak + '</span>'
         : '';
 
       html +=
@@ -1696,6 +1949,7 @@
             '<span style="font-size:1.3rem;">' + (t.avatar || "🤾") + '</span>' +
             '<span class="k-sb-name">' + escapeHtml(t.name) + '</span>' +
             streakHtml +
+            climbHtml +
           '</div>' +
           '<div class="k-sb-right">' +
             deltaHtml +
@@ -1788,8 +2042,8 @@
       renderCurrentQuestion();
       showToast(
         state.config.teamVoteMode === "all"
-          ? "🗳️ Mode : Toutes les équipes votent à chaque question !"
-          : "📢 Mode : Chaque équipe répond à son tour !"
+          ? "🗳️ Mode : Tous les participants votent à chaque question !"
+          : "📢 Mode : Chaque participant répond à son tour !"
       );
     });
 
@@ -1818,14 +2072,8 @@
     if (!g.answered) return;
     window.MPHB_SOUND.playClick();
 
-    var isLast = g.currentIndex >= g.questionsList.length - 1;
-    if (isLast) {
-      finishQuizSession();
-      return;
-    }
-
-    // En Mode Équipes, afficher le Scoreboard Kahoot intermédiaire entre deux questions
-    if (state.config.gameMode === "teams" && !g.showingScoreboard) {
+    // Après CHAQUE question, afficher d'abord le Classement / Scoreboard suite à la réponse !
+    if (!g.showingScoreboard) {
       showIntermediateKahootScoreboard();
       return;
     }

@@ -1,7 +1,8 @@
 /**
  * ============================================================================
- * SERVEUR WEB (COMPATIBLE RENDER / NODE.JS) — MARSEILLE PROVENCE HANDBALL
- * Sert les fichiers statiques du site et synchronise les manettes en direct.
+ * SERVEUR WEB & MULTIJOUEUR TEMPS RÉEL (COMPATIBLE RENDER / NODE.JS)
+ * Marseille Provence Handball (MPHB) — Le Grand Quiz du Handball
+ * Gère la Salle d'Attente (Lobby PIN), les Manettes Joueurs et les Votes Live.
  * Aucune dépendance externe requise (100% modules natifs Node.js).
  * ============================================================================
  */
@@ -28,8 +29,45 @@ const MIME_TYPES = {
   ".md": "text/markdown; charset=utf-8"
 };
 
-// Clients connectés en temps réel (Server-Sent Events pour les manettes joueurs)
+// État de la salle multijoueur en mémoire sur le serveur
+let liveRoom = {
+  pin: "482 915",
+  phase: "lobby", // "lobby" | "countdown" | "question" | "reveal" | "scoreboard" | "podium"
+  quizTitle: "🎄 Le Grand Quiz de Noël MPHB",
+  qNum: 1,
+  totalQuestions: 12,
+  timerSeconds: 20,
+  isDoublePoints: false,
+  correctIndex: null,
+  participants: [] // [{ id, name, avatar, score, streak, lastDelta, prevRank, rank, color }]
+};
+
 const sseClients = new Set();
+
+function broadcastToAll(payload) {
+  const msg = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(msg);
+    } catch (e) {}
+  }
+}
+
+function readJsonBody(req, callback) {
+  let body = "";
+  req.on("data", (chunk) => {
+    body += chunk;
+    if (body.length > 1e6) req.destroy();
+  });
+  req.on("end", () => {
+    try {
+      const data = body ? JSON.parse(body) : {};
+      callback(null, data);
+    } catch (err) {
+      callback(err, null);
+    }
+  });
+}
 
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
@@ -42,7 +80,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 2. Flux temps réel (SSE) pour synchroniser le Lobby PIN et les Manettes Joueurs entre appareils
+  // 2. Récupérer l'état actuel de la salle d'attente / partie
+  if (pathname === "/api/room" && req.method === "GET") {
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*"
+    });
+    res.end(JSON.stringify(liveRoom));
+    return;
+  }
+
+  // 3. Flux temps réel (SSE) pour synchroniser l'écran Animateur et tous les Participants
   if (pathname === "/api/events" && req.method === "GET") {
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -50,7 +99,7 @@ const server = http.createServer((req, res) => {
       "Connection": "keep-alive",
       "Access-Control-Allow-Origin": "*"
     });
-    res.write("data: {\"type\":\"CONNECTED\"}\n\n");
+    res.write(`data: ${JSON.stringify({ type: "ROOM_SYNC", room: liveRoom })}\n\n`);
     sseClients.add(res);
     req.on("close", () => {
       sseClients.delete(res);
@@ -58,31 +107,76 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Diffusion d'un événement (join / vote / reveal) vers tous les appareils connectés
+  // 4. Diffusion et mise à jour d'événements temps réel (Host <-> Participants)
   if (pathname === "/api/broadcast" && req.method === "POST") {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 1e6) req.destroy();
-    });
-    req.on("end", () => {
-      const msg = `data: ${body}\n\n`;
-      for (const client of sseClients) {
-        try {
-          client.write(msg);
-        } catch (e) {}
+    readJsonBody(req, (err, payload) => {
+      if (err || !payload) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false }));
+        return;
       }
+
+      // Synchroniser l'état serveur selon l'événement
+      if (payload.type === "HOST_OPEN_LOBBY") {
+        liveRoom.pin = payload.pin || liveRoom.pin;
+        liveRoom.phase = "lobby";
+        liveRoom.quizTitle = payload.quizTitle || liveRoom.quizTitle;
+        if (Array.isArray(payload.participants)) {
+          liveRoom.participants = payload.participants;
+        }
+      } else if (payload.type === "HOST_SYNC_PARTICIPANTS") {
+        if (payload.pin) liveRoom.pin = payload.pin;
+        if (Array.isArray(payload.participants)) {
+          liveRoom.participants = payload.participants;
+        }
+      } else if (payload.type === "PLAYER_JOINED" && payload.team) {
+        const exists = liveRoom.participants.find(
+          (p) => p.id === payload.team.id || p.name.toLowerCase() === payload.team.name.toLowerCase()
+        );
+        if (!exists) {
+          liveRoom.participants.push(payload.team);
+        }
+      } else if (payload.type === "HOST_COUNTDOWN") {
+        liveRoom.phase = "countdown";
+        liveRoom.qNum = payload.qNum || 1;
+        liveRoom.totalQuestions = payload.total || 12;
+        liveRoom.isDoublePoints = !!payload.isDoublePoints;
+      } else if (payload.type === "HOST_NEW_QUESTION") {
+        liveRoom.phase = "question";
+        liveRoom.qNum = payload.qNum || 1;
+        liveRoom.totalQuestions = payload.total || 12;
+        liveRoom.timerSeconds = payload.timerSeconds || 20;
+        liveRoom.isDoublePoints = !!payload.isDoublePoints;
+        liveRoom.correctIndex = null;
+      } else if (payload.type === "HOST_REVEAL") {
+        liveRoom.phase = "reveal";
+        liveRoom.correctIndex = payload.correctIndex;
+        if (Array.isArray(payload.teams)) {
+          liveRoom.participants = payload.teams;
+        }
+      } else if (payload.type === "HOST_SCOREBOARD") {
+        liveRoom.phase = "scoreboard";
+        if (Array.isArray(payload.teams)) {
+          liveRoom.participants = payload.teams;
+        }
+      } else if (payload.type === "HOST_PODIUM") {
+        liveRoom.phase = "podium";
+        if (Array.isArray(payload.teams)) {
+          liveRoom.participants = payload.teams;
+        }
+      }
+
+      broadcastToAll(payload);
       res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true }));
+      res.end(JSON.stringify({ ok: true, room: liveRoom }));
     });
     return;
   }
 
-  // 4. Servir les fichiers statiques du site
+  // 5. Servir les fichiers statiques du site
   let safePath = pathname === "/" ? "/index.html" : pathname;
   const filePath = path.normalize(path.join(ROOT_DIR, safePath));
 
-  // Sécurité : empêcher de sortir du répertoire racine
   if (!filePath.startsWith(ROOT_DIR)) {
     res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Accès refusé");
@@ -91,7 +185,6 @@ const server = http.createServer((req, res) => {
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      // Fallback SPA vers index.html
       const indexFile = path.join(ROOT_DIR, "index.html");
       fs.readFile(indexFile, (indexErr, content) => {
         if (indexErr) {
