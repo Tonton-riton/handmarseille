@@ -1,0 +1,13 @@
+{
+  "name": "mphb-grand-quiz-handball",
+  "version": "1.0.0",
+  "description": "Le Grand Quiz du Handball — Marseille Provence Handball (MPHB) - Stage Multisport de Noël",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo 'Build OK'"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

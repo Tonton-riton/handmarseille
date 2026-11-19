@@ -807,6 +807,15 @@
     try {
       localStorage.setItem("mphb_live_event_bus", JSON.stringify(Object.assign({ ts: Date.now() }, payload)));
     } catch (e) {}
+    if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+      try {
+        fetch("/api/broadcast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(function () {});
+      } catch (e) {}
+    }
   }
 
   function setupLiveSyncListeners() {
@@ -875,6 +884,17 @@
         } catch (e) {}
       }
     });
+
+    if ((window.location.protocol === "http:" || window.location.protocol === "https:") && typeof EventSource !== "undefined") {
+      try {
+        var es = new EventSource("/api/events");
+        es.onmessage = function (evt) {
+          try {
+            onMessage(JSON.parse(evt.data));
+          } catch (e) {}
+        };
+      } catch (e) {}
+    }
   }
 
   // ==========================================================================
