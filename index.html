@@ -961,38 +961,42 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Les 4 réponses possibles (cochez le bouton rond de la BONNE réponse) *</label>
+                <label class="form-label">Les 4 réponses possibles (cliquez sur « ✅ Bonne réponse » à droite de la réponse correcte) *</label>
                 <div class="options-editor-grid">
-                  <div class="option-editor-row k-editor-red">
-                    <label class="correct-radio-label" title="Définir ▲ Rouge comme bonne réponse">
+                  <div class="option-editor-row k-editor-red" id="editor-row-0">
+                    <span class="option-letter-badge k-red">▲</span>
+                    <input type="text" id="q-opt-0" class="form-input" required placeholder="Texte de la réponse Triangle Rouge (▲)" />
+                    <label class="correct-choice-pill" title="Cliquer pour définir ▲ Rouge comme la bonne réponse">
                       <input type="radio" name="qCorrectOption" value="0" checked />
-                      <span class="option-letter-badge k-red">▲</span>
+                      <span class="correct-pill-text">✅ Bonne réponse</span>
                     </label>
-                    <input type="text" id="q-opt-0" class="form-input" required placeholder="Réponse Triangle Rouge (▲)" />
                   </div>
 
-                  <div class="option-editor-row k-editor-blue">
-                    <label class="correct-radio-label" title="Définir ◆ Bleu comme bonne réponse">
+                  <div class="option-editor-row k-editor-blue" id="editor-row-1">
+                    <span class="option-letter-badge k-blue">◆</span>
+                    <input type="text" id="q-opt-1" class="form-input" required placeholder="Texte de la réponse Losange Bleu (◆)" />
+                    <label class="correct-choice-pill" title="Cliquer pour définir ◆ Bleu comme la bonne réponse">
                       <input type="radio" name="qCorrectOption" value="1" />
-                      <span class="option-letter-badge k-blue">◆</span>
+                      <span class="correct-pill-text">⭕ Choisir</span>
                     </label>
-                    <input type="text" id="q-opt-1" class="form-input" required placeholder="Réponse Losange Bleu (◆)" />
                   </div>
 
-                  <div class="option-editor-row k-editor-yellow">
-                    <label class="correct-radio-label" title="Définir ● Jaune comme bonne réponse">
+                  <div class="option-editor-row k-editor-yellow" id="editor-row-2">
+                    <span class="option-letter-badge k-yellow">●</span>
+                    <input type="text" id="q-opt-2" class="form-input" required placeholder="Texte de la réponse Cercle Jaune (●)" />
+                    <label class="correct-choice-pill" title="Cliquer pour définir ● Jaune comme la bonne réponse">
                       <input type="radio" name="qCorrectOption" value="2" />
-                      <span class="option-letter-badge k-yellow">●</span>
+                      <span class="correct-pill-text">⭕ Choisir</span>
                     </label>
-                    <input type="text" id="q-opt-2" class="form-input" required placeholder="Réponse Cercle Jaune (●)" />
                   </div>
 
-                  <div class="option-editor-row k-editor-green">
-                    <label class="correct-radio-label" title="Définir ■ Vert comme bonne réponse">
+                  <div class="option-editor-row k-editor-green" id="editor-row-3">
+                    <span class="option-letter-badge k-green">■</span>
+                    <input type="text" id="q-opt-3" class="form-input" required placeholder="Texte de la réponse Carré Vert (■)" />
+                    <label class="correct-choice-pill" title="Cliquer pour définir ■ Vert comme la bonne réponse">
                       <input type="radio" name="qCorrectOption" value="3" />
-                      <span class="option-letter-badge k-green">■</span>
+                      <span class="correct-pill-text">⭕ Choisir</span>
                     </label>
-                    <input type="text" id="q-opt-3" class="form-input" required placeholder="Réponse Carré Vert (■)" />
                   </div>
                 </div>
               </div>

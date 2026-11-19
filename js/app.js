@@ -2725,6 +2725,16 @@
     refreshAllUI();
   }
 
+  function updateEditorCorrectPills() {
+    var radios = document.querySelectorAll('input[name="qCorrectOption"]');
+    for (var i = 0; i < radios.length; i++) {
+      var pillText = radios[i].parentElement.querySelector(".correct-pill-text");
+      if (pillText) {
+        pillText.textContent = radios[i].checked ? "✅ Bonne réponse" : "⭕ Choisir";
+      }
+    }
+  }
+
   function renderAdminQuestionsTab() {
     document.getElementById("admin-tab-questions-count").textContent = String(state.questions.length);
 
@@ -2762,8 +2772,11 @@
         var sh = KAHOOT_SHAPES[i];
         optsHtml +=
           '<div class="q-bank-opt' + (isGood ? " is-correct" : "") + '">' +
-            '<strong style="color:' + sh.hex + ';">' + sh.symbol + '</strong> ' + escapeHtml(q.options[i] || "") +
-            (isGood ? " ✅" : "") +
+            '<span class="option-letter-badge ' + sh.colorClass + '" style="width:28px;height:28px;font-size:0.85rem;flex-shrink:0;">' + sh.symbol + '</span>' +
+            '<input type="text" class="inline-opt-input" data-q-id="' + escapeHtml(q.id) + '" data-opt-idx="' + i + '" value="' + escapeHtml(q.options[i] || "") + '" title="Modifier directement le texte de cette réponse" />' +
+            '<button type="button" class="btn-set-correct' + (isGood ? " active-correct" : "") + '" data-q-id="' + escapeHtml(q.id) + '" data-opt-idx="' + i + '" title="Définir cette réponse comme la bonne réponse">' +
+              (isGood ? "✅ Bonne réponse" : "⭕ Choisir") +
+            '</button>' +
           '</div>';
       }
 
@@ -2777,12 +2790,13 @@
               '<span class="level-badge">' + (q.level === "moyen" ? "🔥 Confirmé" : "⭐ Découverte") + '</span>' +
             '</div>' +
             '<div class="q-bank-actions">' +
-              '<button type="button" class="btn-small-outline btn-edit-q" data-q-id="' + escapeHtml(q.id) + '">✏️ Modifier</button>' +
+              '<button type="button" class="btn-small-outline btn-edit-q" data-q-id="' + escapeHtml(q.id) + '">✏️ Éditeur complet</button>' +
               '<button type="button" class="btn-small-outline btn-dup-q" data-q-id="' + escapeHtml(q.id) + '">📋 Dupliquer</button>' +
               '<button type="button" class="btn-small-outline btn-del-q" data-q-id="' + escapeHtml(q.id) + '" style="color:#b91c1c; border-color:#fca5a5;">🗑️ Supprimer</button>' +
             '</div>' +
           '</div>' +
           '<h4 class="q-bank-title">' + escapeHtml(q.question) + '</h4>' +
+          '<p class="form-help-text" style="margin-bottom:8px;">💡 Modifiez le texte d\'une réponse ci-dessous ou cliquez sur <strong>« ⭕ Choisir »</strong> pour changer la bonne réponse :</p>' +
           '<div class="q-bank-options">' + optsHtml + '</div>' +
           '<div class="q-bank-exp"><strong>💡 Explication :</strong> ' + escapeHtml(q.explanation) + '</div>' +
         '</div>';
@@ -2790,6 +2804,39 @@
 
     if (!html) html = '<p class="form-help-text" style="padding:16px;">Aucune question ne correspond à votre recherche.</p>';
     listEl.innerHTML = html;
+
+    // Écouteur : Modifier directement le texte d'une des 4 réponses sur la carte
+    var inlineInputs = listEl.querySelectorAll(".inline-opt-input");
+    for (var inp = 0; inp < inlineInputs.length; inp++) {
+      inlineInputs[inp].addEventListener("change", function () {
+        var qId = this.getAttribute("data-q-id");
+        var optIdx = parseInt(this.getAttribute("data-opt-idx"), 10);
+        var targetQ = state.questions.find(function (item) { return item.id === qId; });
+        if (targetQ && this.value.trim()) {
+          targetQ.options[optIdx] = this.value.trim();
+          saveQuestions();
+          renderAdminAnswersTab();
+          showToast("💾 Texte de la réponse " + KAHOOT_SHAPES[optIdx].symbol + " enregistré !");
+        }
+      });
+    }
+
+    // Écouteur : Changer quelle est la BONNE réponse en 1 clic
+    var setCorrectBtns = listEl.querySelectorAll(".btn-set-correct");
+    for (var sc = 0; sc < setCorrectBtns.length; sc++) {
+      setCorrectBtns[sc].addEventListener("click", function () {
+        var qId = this.getAttribute("data-q-id");
+        var optIdx = parseInt(this.getAttribute("data-opt-idx"), 10);
+        var targetQ = state.questions.find(function (item) { return item.id === qId; });
+        if (targetQ) {
+          targetQ.correctIndex = optIdx;
+          saveQuestions();
+          window.MPHB_SOUND.playClick();
+          refreshAllUI();
+          showToast("✅ Bonne réponse changée : " + KAHOOT_SHAPES[optIdx].symbol + " « " + targetQ.options[optIdx] + " »");
+        }
+      });
+    }
 
     var editBtns = listEl.querySelectorAll(".btn-edit-q");
     for (var e = 0; e < editBtns.length; e++) {
@@ -2880,6 +2927,12 @@
         radiosNew[rn].checked = rn === 0;
       }
       document.getElementById("q-explanation-input").value = "";
+    }
+
+    updateEditorCorrectPills();
+    var allRadios = document.querySelectorAll('input[name="qCorrectOption"]');
+    for (var rc = 0; rc < allRadios.length; rc++) {
+      allRadios[rc].onchange = updateEditorCorrectPills;
     }
 
     modal.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2996,20 +3049,60 @@
 
     listToDisplay.forEach(function (q, idx) {
       var cat = getCategoryById(q.category);
-      var sh = KAHOOT_SHAPES[q.correctIndex];
-      var goodAnswer = sh.symbol + " — " + (q.options[q.correctIndex] || "");
+      var optsMiniHtml = "";
+      for (var i = 0; i < 4; i++) {
+        var isGood = i === q.correctIndex;
+        var sh = KAHOOT_SHAPES[i];
+        optsMiniHtml +=
+          '<button type="button" class="sheet-opt-btn' + (isGood ? " is-correct" : "") + '" data-q-id="' + escapeHtml(q.id) + '" data-opt-idx="' + i + '" title="Cliquer pour définir cette réponse comme la bonne réponse">' +
+            '<span class="option-letter-badge ' + sh.colorClass + '" style="width:24px;height:24px;font-size:0.75rem;flex-shrink:0;">' + sh.symbol + '</span>' +
+            '<span style="flex:1;text-align:left;">' + escapeHtml(q.options[i] || "") + '</span>' +
+            '<span>' + (isGood ? "✅ Bonne" : "⭕") + '</span>' +
+          '</button>';
+      }
+
       html +=
         '<div class="answer-sheet-card">' +
-          '<div style="font-size:0.78rem; font-weight:800; color:' + cat.color + '; margin-bottom:4px;">' +
-            '#' + (idx + 1) + ' • ' + cat.icon + ' ' + escapeHtml(cat.name) +
+          '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">' +
+            '<span style="font-size:0.78rem; font-weight:800; color:' + cat.color + ';">' +
+              '#' + (idx + 1) + ' • ' + cat.icon + ' ' + escapeHtml(cat.name) +
+            '</span>' +
+            '<button type="button" class="btn-small-outline btn-sheet-edit-q" data-q-id="' + escapeHtml(q.id) + '">✏️ Modifier réponses</button>' +
           '</div>' +
           '<div class="answer-sheet-q">' + escapeHtml(q.question) + '</div>' +
-          '<div class="answer-sheet-good">✅ Réponse : ' + escapeHtml(goodAnswer) + '</div>' +
+          '<div class="sheet-opts-grid">' + optsMiniHtml + '</div>' +
           '<div class="answer-sheet-exp"><strong>💡 Explication :</strong> ' + escapeHtml(q.explanation) + '</div>' +
         '</div>';
     });
 
     sheetEl.innerHTML = html;
+
+    // Clic sur l'une des 4 réponses dans l'onglet 4 pour changer la bonne réponse en 1 clic
+    var sheetOptBtns = sheetEl.querySelectorAll(".sheet-opt-btn");
+    for (var s = 0; s < sheetOptBtns.length; s++) {
+      sheetOptBtns[s].addEventListener("click", function () {
+        var qId = this.getAttribute("data-q-id");
+        var optIdx = parseInt(this.getAttribute("data-opt-idx"), 10);
+        var targetQ = state.questions.find(function (item) { return item.id === qId; });
+        if (targetQ) {
+          targetQ.correctIndex = optIdx;
+          saveQuestions();
+          window.MPHB_SOUND.playClick();
+          refreshAllUI();
+          showToast("✅ Bonne réponse mise à jour : " + KAHOOT_SHAPES[optIdx].symbol + " « " + targetQ.options[optIdx] + " »");
+        }
+      });
+    }
+
+    // Bouton "✏️ Modifier réponses" dans l'onglet 4 -> bascule sur l'éditeur de la question
+    var sheetEditBtns = sheetEl.querySelectorAll(".btn-sheet-edit-q");
+    for (var e = 0; e < sheetEditBtns.length; e++) {
+      sheetEditBtns[e].addEventListener("click", function () {
+        var qId = this.getAttribute("data-q-id");
+        switchAdminTab("tab-questions");
+        openQuestionEditor(qId);
+      });
+    }
   }
 
   function renderAdminScoresTab() {
