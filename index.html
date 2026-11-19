@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Le Grand Quiz du Handball — Marseille Provence Handball (MPHB)</title>
+  <meta name="description" content="Quiz interactif et ludique sur les règles et la découverte du handball pour le stage multisport de Noël du Marseille Provence Handball (MPHB)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body data-bg-theme="stadium">
+  <!-- FOND VISUEL PLEIN ÉCRAN : ARÈNE DE HANDBALL MPHB + PROJECTEURS + FORMES GAME SHOW -->
+  <div class="arena-background" aria-hidden="true">
+    <svg class="arena-court-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="spotLeft" cx="15%" cy="8%" r="55%">
+          <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="#38BDF8" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="spotRight" cx="85%" cy="8%" r="55%">
+          <stop offset="0%" stop-color="#FFC700" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#FFC700" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#0095E8" stop-opacity="0.35" />
+          <stop offset="100%" stop-color="#002B5C" stop-opacity="0" />
+        </radialGradient>
+      </defs>
+
+      <!-- Faisceaux des projecteurs du stade -->
+      <rect width="1440" height="900" fill="url(#spotLeft)" />
+      <rect width="1440" height="900" fill="url(#spotRight)" />
+      <rect width="1440" height="900" fill="url(#centerGlow)" />
+
+      <!-- Rayons lumineux de stade en haut -->
+      <polygon points="0,0 260,0 620,900 0,900" fill="#FFFFFF" opacity="0.04" />
+      <polygon points="1440,0 1180,0 820,900 1440,900" fill="#FFC700" opacity="0.04" />
+
+      <!-- Lignes du terrain de Handball en perspective / vue aérienne stylisée -->
+      <g stroke="#FFFFFF" stroke-opacity="0.18" fill="none">
+        <!-- Cadre extérieur du terrain -->
+        <rect x="70" y="70" width="1300" height="760" rx="24" stroke-width="4" />
+        <!-- Ligne médiane & rond central -->
+        <line x1="720" y1="70" x2="720" y2="830" stroke-width="4" />
+        <circle cx="720" cy="450" r="115" stroke-width="4" />
+        <circle cx="720" cy="450" r="10" fill="#FFC700" fill-opacity="0.35" />
+
+        <!-- Zone des 6 mètres gauche & droite -->
+        <path d="M 70 210 A 240 240 0 0 1 310 450 A 240 240 0 0 1 70 690" stroke="#FFC700" stroke-opacity="0.32" stroke-width="5" fill="#FFC700" fill-opacity="0.06" />
+        <path d="M 1370 210 A 240 240 0 0 0 1130 450 A 240 240 0 0 0 1370 690" stroke="#FFC700" stroke-opacity="0.32" stroke-width="5" fill="#FFC700" fill-opacity="0.06" />
+
+        <!-- Ligne des 9 mètres en pointillés gauche & droite -->
+        <path d="M 70 120 A 340 340 0 0 1 410 450 A 340 340 0 0 1 70 780" stroke-width="3.5" stroke-dasharray="16 14" />
+        <path d="M 1370 120 A 340 340 0 0 0 1030 450 A 340 340 0 0 0 1370 780" stroke-width="3.5" stroke-dasharray="16 14" />
+
+        <!-- Marques des 7 mètres (Penalty) & 4 mètres (Gardien) -->
+        <line x1="355" y1="430" x2="355" y2="470" stroke="#EF233C" stroke-opacity="0.45" stroke-width="5" />
+        <line x1="1085" y1="430" x2="1085" y2="470" stroke="#EF233C" stroke-opacity="0.45" stroke-width="5" />
+        <line x1="210" y1="435" x2="210" y2="465" stroke-width="4" />
+        <line x1="1230" y1="435" x2="1230" y2="465" stroke-width="4" />
+      </g>
+    </svg>
+
+    <!-- Formes géométriques colorées flottantes en arrière-plan (▲ ◆ ● ■) -->
+    <div class="kahoot-bg-shapes">
+      <span class="k-float-shape k-shape-tri">▲</span>
+      <span class="k-float-shape k-shape-dia">◆</span>
+      <span class="k-float-shape k-shape-cir">●</span>
+      <span class="k-float-shape k-shape-sq">■</span>
+    </div>
+  </div>
+
+  <!-- Canvas d'arrière-plan pour les flocons de Noël et les confettis de victoire -->
+  <canvas id="fx-canvas" aria-hidden="true"></canvas>
+
+  <!-- ========================================================================
+       BARRE SUPÉRIEURE DE NAVIGATION (Toujours accessible pour l'animateur)
+       ======================================================================== -->
+  <header class="top-navbar" id="top-navbar">
+    <div class="nav-brand" id="nav-home-trigger" role="button" tabindex="0" title="Retour à l'accueil">
+      <div class="nav-logo-wrap" id="nav-logo-container"></div>
+      <div class="nav-brand-text">
+        <span class="nav-club-name">MARSEILLE PROVENCE HANDBALL</span>
+        <span class="nav-event-tag">🎄 Stage de Noël • <strong class="kahoot-pill-tag">QUIZ LIVE</strong></span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button type="button" class="nav-btn" id="btn-nav-home" title="Aller à l'accueil">
+        <span class="nav-btn-icon">🏠</span>
+        <span class="nav-btn-label">Accueil</span>
+      </button>
+
+      <button type="button" class="nav-btn" id="btn-nav-lobby" title="Ouvrir le Lobby avec Code PIN">
+        <span class="nav-btn-icon">📡</span>
+        <span class="nav-btn-label">Lobby PIN</span>
+      </button>
+
+      <button type="button" class="nav-btn" id="btn-nav-player" title="Ouvrir la Manette Joueur (Code PIN)">
+        <span class="nav-btn-icon">📱</span>
+        <span class="nav-btn-label">Manette Joueur</span>
+      </button>
+
+      <button type="button" class="nav-btn nav-btn-admin" id="btn-nav-admin" title="Ouvrir le Mode Animateur et le Panel Admin">
+        <span class="nav-btn-icon">🛠️</span>
+        <span class="nav-btn-label">Mode Animateur / Admin</span>
+        <span class="nav-badge" id="nav-questions-count">48 Q</span>
+      </button>
+
+      <button type="button" class="nav-btn" id="btn-cycle-bg" title="Changer l'ambiance du fond d'écran (Terrain Handball / Quiz Show / Noël)">
+        <span class="nav-btn-icon">🎨</span>
+        <span class="nav-btn-label" id="label-bg-theme">Fond : Terrain</span>
+      </button>
+
+      <button type="button" class="nav-btn nav-btn-icon-only" id="btn-toggle-music" title="Activer / Désactiver la musique d'ambiance">
+        <span id="icon-music">🎵</span>
+      </button>
+
+      <button type="button" class="nav-btn nav-btn-icon-only" id="btn-toggle-sound" title="Activer / Désactiver les effets sonores">
+        <span id="icon-sound">🔊</span>
+      </button>
+
+      <button type="button" class="nav-btn nav-btn-icon-only" id="btn-toggle-snow" title="Activer / Désactiver la neige de Noël">
+        <span id="icon-snow">❄️</span>
+      </button>
+
+      <button type="button" class="nav-btn nav-btn-icon-only" id="btn-toggle-fullscreen" title="Mode Plein Écran pour l'animation">
+        <span id="icon-fullscreen">⛶</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       CONTENEUR PRINCIPAL DES ÉCRANS
+       ======================================================================== -->
+  <main class="app-container">
+
+    <!-- ======================================================================
+         ÉCRAN 1 : PAGE D'ACCUEIL (MPHB)
+         ====================================================================== -->
+    <section id="screen-home" class="screen active" aria-labelledby="main-hero-title">
+      <div class="hero-card">
+        <!-- Guirlande / Bandeau festif Stage de Noël -->
+        <div class="christmas-ribbon">
+          <span>🎄</span>
+          <span>STAGE MULTISPORT DE NOËL • MARSEILLE PROVENCE HANDBALL</span>
+          <span>🤾</span>
+        </div>
+
+        <!-- Zone du Logo Officiel MPHB (Jamais déformé) -->
+        <div class="hero-logo-section">
+          <div class="hero-logo-frame" id="hero-logo-container"></div>
+          <img id="auto-file-logo" src="assets/logo-mphb.jpg" alt="Logo Officiel Marseille Provence Handball" style="display:none;" />
+        </div>
+
+        <!-- Formes de réponses (▲ ◆ ● ■) -->
+        <div class="kahoot-shapes-strip" aria-hidden="true">
+          <span class="k-mini-badge k-red">▲</span>
+          <span class="k-mini-badge k-blue">◆</span>
+          <span class="k-mini-badge k-yellow">●</span>
+          <span class="k-mini-badge k-green">■</span>
+        </div>
+
+        <!-- Titre et Sous-titre officiels demandés -->
+        <h1 id="main-hero-title" class="hero-title">LE GRAND QUIZ DU HANDBALL</h1>
+        <p class="hero-subtitle">Connais-tu vraiment les règles du handball ?</p>
+
+        <!-- Sélecteur rapide pour démarrer en 1 clic devant les enfants -->
+        <div class="quick-launch-panel">
+          <div class="quick-launch-row">
+            <!-- Choix du mode : Individuel ou Équipes -->
+            <div class="quick-field">
+              <label class="quick-label">1. Mode de jeu</label>
+              <div class="mode-toggle-group" role="group" aria-label="Choix du mode de jeu">
+                <button type="button" class="mode-pill active" id="home-mode-indiv" data-mode="individual">
+                  <span class="mode-pill-icon">🧒</span>
+                  <span>Mode Individuel</span>
+                </button>
+                <button type="button" class="mode-pill" id="home-mode-teams" data-mode="teams">
+                  <span class="mode-pill-icon">👥</span>
+                  <span>Mode Équipes</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Choix du Quiz à lancer -->
+            <div class="quick-field">
+              <label for="home-quiz-select" class="quick-label">2. Parcours / Quiz sélectionné</label>
+              <select id="home-quiz-select" class="quick-select"></select>
+            </div>
+          </div>
+
+          <!-- Résumé des paramètres actifs -->
+          <div class="quick-summary-badges" id="home-active-config-summary"></div>
+        </div>
+
+        <!-- Les grands boutons principaux (Commencer le Quiz, Lobby PIN, Mode Animateur) -->
+        <div class="hero-cta-group">
+          <button type="button" class="btn-primary-giant" id="btn-start-quiz">
+            <span class="btn-giant-icon">🤾</span>
+            <span>COMMENCER LE QUIZ</span>
+          </button>
+
+          <button type="button" class="btn-kahoot-lobby-giant" id="btn-open-lobby">
+            <span class="btn-giant-icon">📡</span>
+            <span>LOBBY MULTIJOUEUR (CODE PIN)</span>
+          </button>
+
+          <button type="button" class="btn-secondary-giant" id="btn-open-animator">
+            <span class="btn-giant-icon">🛠️</span>
+            <span>MODE ANIMATEUR</span>
+          </button>
+        </div>
+
+        <!-- Barre d'accès rapide Manette Joueur Code PIN -->
+        <div class="player-join-banner">
+          <span>📱 <strong>Vous êtes un joueur ou une équipe avec une tablette / téléphone ?</strong></span>
+          <button type="button" class="btn-join-pin-small" id="btn-home-join-pin">
+            Entrer un CODE PIN pour rejoindre ➔
+          </button>
+        </div>
+
+        <!-- Cartes des 4 thématiques avec lancement rapide par catégorie -->
+        <div class="home-categories-section">
+          <h2 class="home-section-heading">📚 Les 4 grandes catégories du Quiz (clique sur une catégorie pour la lancer !)</h2>
+          <div class="categories-grid" id="home-categories-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ÉCRAN 1-BIS : LOBBY MULTIJOUEUR AVEC CODE PIN & MUSIQUE
+         ====================================================================== -->
+    <section id="screen-lobby" class="screen">
+      <div class="kahoot-lobby-card">
+        <!-- En-tête PIN -->
+        <div class="lobby-pin-banner">
+          <div class="lobby-pin-instructions">
+            <span class="lobby-join-label">Rejoignez la partie sur cet écran ou via <strong>Manette Joueur</strong></span>
+            <span class="lobby-quiz-name" id="lobby-active-quiz-title">🎄 Le Grand Quiz de Noël MPHB</span>
+          </div>
+
+          <div class="lobby-pin-box">
+            <span class="pin-box-small">CODE PIN DU JEU :</span>
+            <span class="pin-box-digits" id="lobby-pin-code">482 915</span>
+          </div>
+
+          <div class="lobby-pin-actions">
+            <button type="button" class="btn-lobby-controller" id="btn-lobby-open-controller" title="Ouvre une manette joueur dans un nouvel onglet pour jouer en multi-écrans">
+              📱 Ouvrir une Manette Joueur
+            </button>
+            <button type="button" class="btn-lobby-new-pin" id="btn-lobby-regenerate-pin" title="Générer un nouveau Code PIN">
+              🔄 Nouveau PIN
+            </button>
+          </div>
+        </div>
+
+        <!-- Zone centrale du Lobby : Joueurs / Équipes inscrits -->
+        <div class="lobby-arena">
+          <div class="lobby-status-bar">
+            <div class="lobby-counter-pill">
+              <span>👥</span>
+              <span id="lobby-players-count">3 Équipes prêtes</span>
+            </div>
+
+            <!-- Ajout rapide d'une équipe ou d'un joueur par l'animateur -->
+            <form id="form-lobby-add-player" class="lobby-quick-add-form">
+              <select id="lobby-add-avatar" class="lobby-avatar-select" title="Choisir une mascotte">
+                <option value="🦁">🦁 Lion</option>
+                <option value="🤾">🤾 Handballeur</option>
+                <option value="🎄">🎄 Sapin Noël</option>
+                <option value="⭐">⭐ Étoile</option>
+                <option value="🔥">🔥 Flamme</option>
+                <option value="🧤">🧤 Gardien</option>
+                <option value="🏆">🏆 Champion</option>
+                <option value="🐬">🐬 Dauphin</option>
+              </select>
+              <input type="text" id="lobby-add-name" class="lobby-name-input" placeholder="Ajouter une équipe ou un joueur..." />
+              <button type="submit" class="btn-small-accent">➕ Ajouter</button>
+            </form>
+
+            <button type="button" class="btn-primary-giant" id="btn-lobby-start-game" style="padding: 13px 26px; font-size: 1.1rem;">
+              <span>🚀</span>
+              <span>DÉMARRER LE QUIZ !</span>
+            </button>
+          </div>
+
+          <!-- Grille des badges joueurs/équipes -->
+          <div class="lobby-players-grid" id="lobby-players-grid"></div>
+
+          <p class="lobby-waiting-tip">
+            🎵 Musique du Lobby active ! Cliquez sur une équipe pour la retirer, ou cliquez sur <strong>« DÉMARRER LE QUIZ ! »</strong> pour lancer le décompte 3, 2, 1 !
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ÉCRAN 2 : L'ARÈNE DU QUIZ INTERACTIF (▲ ◆ ● ■)
+         ====================================================================== -->
+    <section id="screen-quiz" class="screen" aria-live="polite">
+
+      <!-- OVERLAY DE COMPTE À REBOURS (3... 2... 1... QUESTION X !) -->
+      <div id="kahoot-countdown-overlay" class="kahoot-overlay hidden">
+        <div class="k-countdown-box">
+          <span class="k-countdown-cat" id="k-cd-category">📋 Les règles du handball</span>
+          <h2 class="k-countdown-qnum" id="k-cd-qnum">Question 1 sur 12</h2>
+          <div class="k-countdown-points-tag" id="k-cd-points-tag">⚡ JUSQU'À 1000 POINTS (BONUS DE VITESSE)</div>
+          <div class="k-countdown-number" id="k-cd-number">3</div>
+        </div>
+      </div>
+
+      <!-- OVERLAY TABLEAU DES SCORES INTERMÉDIAIRE ENTRE LES QUESTIONS -->
+      <div id="kahoot-scoreboard-overlay" class="kahoot-overlay hidden">
+        <div class="k-scoreboard-card">
+          <div class="k-scoreboard-header">
+            <div>
+              <span class="k-sb-badge">CLASSEMENT EN DIRECT — MPHB</span>
+              <h2 class="k-sb-title">🏆 Tableau des Scores</h2>
+            </div>
+            <button type="button" class="btn-next-question" id="btn-sb-next-question">
+              <span id="btn-sb-next-label">QUESTION SUIVANTE</span>
+              <span>➔</span>
+            </button>
+          </div>
+
+          <!-- Bandeau de série (Streak) -->
+          <div class="k-streak-banner" id="k-sb-streak-banner">
+            🔥 Quelle ambiance au Stage de Noël du Marseille Provence Handball !
+          </div>
+
+          <!-- Liste des barres de scores -->
+          <div class="k-scoreboard-list" id="k-scoreboard-list"></div>
+        </div>
+      </div>
+
+      <!-- Barre supérieure du Quiz (Question X/N, Catégorie, PIN, Score/Équipe active) -->
+      <div class="kahoot-top-strip">
+        <div class="k-strip-left">
+          <span class="k-q-pill" id="quiz-question-counter">1 / 12</span>
+          <span class="category-badge" id="quiz-category-badge">📋 Catégorie</span>
+          <span class="level-badge" id="quiz-level-badge">⭐ Niveau</span>
+          <span class="k-double-pts-badge hidden" id="quiz-double-pts-badge">🔥 POINTS ×2</span>
+        </div>
+
+        <div class="k-strip-center">
+          <div class="progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="quiz-progress-track">
+            <div class="progress-bar-fill" id="quiz-progress-fill" style="width: 0%;"></div>
+          </div>
+          <span id="quiz-quiz-title-small" class="quiz-title-small">PIN: 482 915</span>
+        </div>
+
+        <div class="k-strip-right">
+          <div class="score-pill" id="quiz-score-box">
+            <span class="score-icon">🏆</span>
+            <span id="quiz-score-value">0 pt</span>
+          </div>
+          <span class="k-streak-pill hidden" id="quiz-streak-pill">🔥 0</span>
+        </div>
+      </div>
+
+      <!-- Bandeau Tour par Tour OU Vote Multi-Équipes en Mode Équipes -->
+      <div id="team-turn-banner" class="team-turn-banner hidden">
+        <div class="team-turn-left">
+          <span class="team-turn-badge" id="team-mode-badge-label">📢 AU TOUR DE L'ÉQUIPE</span>
+          <span class="team-turn-name" id="active-team-name">Équipe 1</span>
+        </div>
+        <div class="team-turn-right">
+          <button type="button" class="btn-switch-team-vote-mode" id="btn-toggle-team-vote-mode" title="Basculer entre Tour par tour et Vote de toutes les équipes en même temps">
+            🔄 Mode : Tour par tour
+          </button>
+          <span class="team-score-chip" id="active-team-score-pill">0 pt</span>
+        </div>
+      </div>
+
+      <!-- Barre de sélection rapide quand TOUTES les équipes votent à la même question -->
+      <div id="multi-team-vote-bar" class="multi-team-vote-bar hidden">
+        <div class="multi-vote-header">
+          <span>🗳️ <strong>Vote de toutes les équipes :</strong> Cliquez sur une équipe puis sur sa couleur (▲ ◆ ● ■), ou cliquez sur « Révéler la réponse » !</span>
+          <button type="button" class="btn-small-accent" id="btn-reveal-multi-votes">🔔 Révéler la réponse &amp; les barres !</button>
+        </div>
+        <div class="multi-team-chips" id="multi-team-chips"></div>
+      </div>
+
+      <!-- GRANDE BANNIÈRE BLANCHE DE LA QUESTION -->
+      <div class="kahoot-question-banner" id="question-card">
+        <h2 class="kahoot-question-title" id="question-text">
+          Chargement de la question...
+        </h2>
+      </div>
+
+      <!-- ARÈNE CENTRALE EN 3 COLONNES : [CHRONO ROND] - [MÉDIA / BARRES & EXPLICATION] - [COMPTEUR RÉPONSES] -->
+      <div class="kahoot-stage-middle" id="quiz-main-layout">
+
+        <!-- Colonne Gauche : Chronomètre circulaire géant -->
+        <div class="kahoot-stage-left">
+          <div class="kahoot-timer-circle" id="quiz-timer-box">
+            <svg class="k-timer-svg" viewBox="0 0 100 100">
+              <circle class="k-timer-bg" cx="50" cy="50" r="44"></circle>
+              <circle class="k-timer-ring" id="k-timer-ring-circle" cx="50" cy="50" r="44"></circle>
+            </svg>
+            <div class="k-timer-inner">
+              <span class="k-timer-number" id="quiz-timer-value">20</span>
+              <span class="k-timer-unit" id="quiz-timer-unit">sec</span>
+            </div>
+          </div>
+          <button type="button" class="timer-pause-btn" id="btn-pause-timer" title="Mettre en pause / reprendre le chronomètre">
+            ⏸️ Pause
+          </button>
+        </div>
+
+        <!-- Colonne Centrale : Illustration pendant la question, puis Graphique + Explication Pédagogique après validation -->
+        <div class="kahoot-stage-center">
+          <!-- Illustration SVG du Handball -->
+          <div class="kahoot-media-card" id="question-illustration-wrapper">
+            <div class="question-illustration" id="question-illustration-box"></div>
+          </div>
+
+          <!-- Panneau de révélation : Graphique en Barres (▲ ◆ ● ■) + Explication Pédagogique du Coach MPHB -->
+          <div class="feedback-panel hidden" id="feedback-panel">
+            <!-- Graphique en barres des 4 couleurs -->
+            <div class="kahoot-bars-chart" id="kahoot-bars-chart">
+              <div class="k-bar-col">
+                <span class="k-bar-count" id="k-bar-count-0">0</span>
+                <div class="k-bar-track"><div class="k-bar-fill k-red" id="k-bar-fill-0" style="height:12%;"></div></div>
+                <span class="k-bar-label k-red">▲</span>
+              </div>
+              <div class="k-bar-col">
+                <span class="k-bar-count" id="k-bar-count-1">0</span>
+                <div class="k-bar-track"><div class="k-bar-fill k-blue" id="k-bar-fill-1" style="height:12%;"></div></div>
+                <span class="k-bar-label k-blue">◆</span>
+              </div>
+              <div class="k-bar-col">
+                <span class="k-bar-count" id="k-bar-count-2">0</span>
+                <div class="k-bar-track"><div class="k-bar-fill k-yellow" id="k-bar-fill-2" style="height:12%;"></div></div>
+                <span class="k-bar-label k-yellow">●</span>
+              </div>
+              <div class="k-bar-col">
+                <span class="k-bar-count" id="k-bar-count-3">0</span>
+                <div class="k-bar-track"><div class="k-bar-fill k-green" id="k-bar-fill-3" style="height:12%;"></div></div>
+                <span class="k-bar-label k-green">■</span>
+              </div>
+            </div>
+
+            <!-- Message de validation + Points gagnés -->
+            <div class="feedback-header">
+              <span class="feedback-emoji" id="feedback-emoji">🎉</span>
+              <div class="feedback-title-wrap">
+                <div class="feedback-title-row">
+                  <h3 class="feedback-title" id="feedback-title">Bravo !</h3>
+                  <span class="k-points-earned-badge" id="feedback-points-earned">+950 pts</span>
+                </div>
+                <p class="feedback-correct-answer" id="feedback-correct-answer"></p>
+              </div>
+            </div>
+
+            <!-- Explication pédagogique pour les enfants -->
+            <div class="feedback-explanation-box">
+              <span class="explanation-label">💡 L'explication du coach MPHB :</span>
+              <p class="explanation-text" id="feedback-explanation-text"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne Droite : Compteur de réponses & Bouton Suivant -->
+        <div class="kahoot-stage-right">
+          <div class="kahoot-answers-counter-circle">
+            <span class="k-ans-number" id="kahoot-answers-count">0</span>
+            <span class="k-ans-label">Réponse(s)</span>
+          </div>
+
+          <button type="button" class="btn-kahoot-next hidden" id="btn-next-question">
+            <span id="btn-next-label">SUIVANT</span>
+            <span>➔</span>
+          </button>
+
+          <button type="button" class="btn-kahoot-skip" id="btn-skip-reveal" title="Révéler la réponse immédiatement">
+            ⏭️ Révéler
+          </button>
+        </div>
+
+      </div>
+
+      <!-- LES 4 BRIQUES GÉANTES DE RÉPONSES (▲ Rouge, ◆ Bleu, ● Jaune, ■ Vert) -->
+      <div class="kahoot-options-grid" id="options-grid" role="group" aria-label="4 choix de réponses">
+        <!-- Généré dynamiquement par JS avec les formes ▲ ◆ ● ■ -->
+      </div>
+
+      <!-- Classement Équipes compact et ajustable en bas de l'arène -->
+      <aside class="live-leaderboard-card hidden" id="live-leaderboard-card">
+        <div class="leaderboard-header">
+          <h3>🏆 Classement Équipes en direct (Bonus animateur +100 / -100 pts)</h3>
+        </div>
+        <div class="leaderboard-list leaderboard-list-horizontal" id="live-leaderboard-list"></div>
+      </aside>
+
+      <!-- Barre d'outils discrète de l'animateur en bas du quiz -->
+      <div class="quiz-footer-bar">
+        <button type="button" class="btn-ghost-small" id="btn-quiz-abort">
+          🏠 Quitter la partie
+        </button>
+        <span class="keyboard-hint">
+          ⌨️ Raccourcis : Touches <strong>1 (▲ Rouge), 2 (◆ Bleu), 3 (● Jaune), 4 (■ Vert)</strong> • <strong>Entrée / Espace</strong> pour continuer
+        </span>
+        <button type="button" class="btn-ghost-small" id="btn-quiz-open-admin">
+          🛠️ Mode Animateur
+        </button>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ÉCRAN 3 : LE GRAND PODIUM & ÉCRAN FINAL
+         ====================================================================== -->
+    <section id="screen-results" class="screen">
+      <div class="results-card">
+        <div class="results-header">
+          <div class="results-logo-mini" id="results-logo-container"></div>
+          <div class="results-trophy-badge" id="results-trophy-icon">🏆</div>
+          <span class="k-podium-banner-tag">🎄 GRAND PODIUM DU QUIZ — MARSEILLE PROVENCE HANDBALL 🤾</span>
+          <h1 class="results-title" id="results-title">FÉLICITATIONS !</h1>
+          <p class="results-encouragement" id="results-encouragement">
+            Bravo à tous les participants du stage de Noël du Marseille Provence Handball !
+          </p>
+        </div>
+
+        <!-- Podium & Classement des Équipes (affiché si Mode Équipes activé) -->
+        <div id="results-teams-section" class="results-teams-section hidden">
+          <h2 class="results-section-title">🥇 LE PODIUM DES ÉQUIPES</h2>
+          <div class="podium-container" id="results-podium"></div>
+          <div class="final-teams-table-wrap" id="results-teams-table"></div>
+        </div>
+
+        <!-- Les 4 statistiques clés demandées -->
+        <div class="results-stats-grid">
+          <div class="stat-box stat-box-score">
+            <span class="stat-box-icon">🏆</span>
+            <span class="stat-box-value" id="res-final-score">9 450 pts</span>
+            <span class="stat-box-label">Score Final</span>
+          </div>
+
+          <div class="stat-box stat-box-correct">
+            <span class="stat-box-icon">✅</span>
+            <span class="stat-box-value" id="res-correct-count">10</span>
+            <span class="stat-box-label">Bonnes réponses</span>
+          </div>
+
+          <div class="stat-box stat-box-wrong">
+            <span class="stat-box-icon">❌</span>
+            <span class="stat-box-value" id="res-wrong-count">2</span>
+            <span class="stat-box-label">Mauvaises réponses</span>
+          </div>
+
+          <div class="stat-box stat-box-percent">
+            <span class="stat-box-icon">🎯</span>
+            <span class="stat-box-value" id="res-percentage">83%</span>
+            <span class="stat-box-label">Pourcentage de réussite</span>
+          </div>
+        </div>
+
+        <!-- Boutons d'action de fin de partie -->
+        <div class="results-actions">
+          <button type="button" class="btn-primary-giant" id="btn-restart-same-quiz">
+            <span>🔄</span>
+            <span>RECOMMENCER LE QUIZ</span>
+          </button>
+
+          <button type="button" class="btn-secondary-giant" id="btn-results-home">
+            <span>🏠</span>
+            <span>RETOUR À L'ACCUEIL</span>
+          </button>
+
+          <button type="button" class="btn-outline-light" id="btn-results-confetti">
+            <span>🎉</span>
+            <span>Pluie de confettis !</span>
+          </button>
+        </div>
+
+        <!-- Récapitulatif détaillé des questions & explications de la partie -->
+        <div class="results-review-section">
+          <button type="button" class="btn-toggle-review" id="btn-toggle-review">
+            <span>📖 Revoir toutes les questions et explications du coach MPHB</span>
+            <span id="review-chevron">▼</span>
+          </button>
+          <div class="review-list hidden" id="results-review-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ÉCRAN 4 : MODE ANIMATEUR & STUDIO CRÉATEUR DE QUIZ (PANEL ADMIN)
+         ====================================================================== -->
+    <section id="screen-admin" class="screen">
+      <div class="admin-panel-card">
+        <!-- En-tête du Panel Admin / Animateur -->
+        <div class="admin-header">
+          <div class="admin-header-left">
+            <span class="admin-badge">STUDIO CRÉATEUR DE QUIZ &amp; ESPACE ANIMATEUR</span>
+            <h1 class="admin-title">🛠️ Panel Admin &amp; Mode Animateur — MPHB</h1>
+            <p class="admin-subtitle">
+              Créez vos propres Quiz, gérez les 48 questions officielles, configurez le chrono, les équipes et les scores.
+            </p>
+          </div>
+          <div class="admin-header-right">
+            <button type="button" class="btn-admin-launch-now" id="btn-admin-quick-start">
+              🚀 Lancer le Quiz configuré
+            </button>
+            <button type="button" class="btn-admin-close" id="btn-admin-lock" title="Verrouiller l'accès Admin avec le code secret">
+              🔒 Verrouiller
+            </button>
+            <button type="button" class="btn-admin-close" id="btn-admin-back-home">
+              ✖ Retour à l'accueil
+            </button>
+          </div>
+        </div>
+
+        <!-- Barre d'onglets du Panel Admin -->
+        <nav class="admin-tabs" role="tablist" aria-label="Navigation du Panel Admin">
+          <button type="button" class="admin-tab active" data-tab="tab-config" role="tab" aria-selected="true">
+            <span>🎮</span>
+            <span>1. Configurer &amp; Lancer</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-quizzes" role="tab" aria-selected="false">
+            <span>📚</span>
+            <span>2. Créer &amp; Gérer les Quiz</span>
+            <span class="tab-pill" id="admin-tab-quizzes-count">5</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-questions" role="tab" aria-selected="false">
+            <span>❓</span>
+            <span>3. Banque de Questions</span>
+            <span class="tab-pill" id="admin-tab-questions-count">48</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-answers" role="tab" aria-selected="false">
+            <span>📖</span>
+            <span>4. Réponses &amp; Explications</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-scores" role="tab" aria-selected="false">
+            <span>🏆</span>
+            <span>5. Scores &amp; Équipes</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-settings" role="tab" aria-selected="false">
+            <span>⚙️</span>
+            <span>6. Logo MPHB &amp; Fichiers</span>
+          </button>
+        </nav>
+
+        <!-- ================================================================
+             ONGLET 1 : CONFIGURER & LANCER UNE PARTIE
+             ================================================================ -->
+        <div id="tab-config" class="admin-tab-content active">
+          <div class="admin-grid-2col">
+            <!-- Colonne gauche : Source des questions, Catégories, Nombre, Chrono -->
+            <div class="admin-box">
+              <h2 class="admin-box-title">🎯 Paramètres du Quiz</h2>
+
+              <div class="form-group">
+                <label class="form-label">Comment souhaitez-vous choisir les questions ?</label>
+                <div class="radio-cards-row">
+                  <label class="radio-card">
+                    <input type="radio" name="configSourceType" value="preset" checked />
+                    <span>📚 Utiliser un Quiz créé / prédéfini</span>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="configSourceType" value="custom" />
+                    <span>🎲 Tirage personnalisé par catégories</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Bloc si Quiz prédéfini/créé -->
+              <div id="config-preset-block" class="form-group">
+                <label for="admin-preset-select" class="form-label">Sélectionner le Quiz à lancer :</label>
+                <select id="admin-preset-select" class="form-select"></select>
+                <p id="admin-preset-desc" class="form-help-text"></p>
+              </div>
+
+              <!-- Bloc si Tirage personnalisé par catégories -->
+              <div id="config-custom-block" class="form-group hidden">
+                <label class="form-label">Catégories de questions à inclure :</label>
+                <div id="admin-categories-checkboxes" class="categories-check-grid"></div>
+
+                <div class="form-row-2col" style="margin-top: 14px;">
+                  <div>
+                    <label for="admin-question-count" class="form-label">Nombre de questions :</label>
+                    <select id="admin-question-count" class="form-select">
+                      <option value="5">5 questions (Express)</option>
+                      <option value="8">8 questions</option>
+                      <option value="10">10 questions</option>
+                      <option value="12" selected>12 questions (Recommandé)</option>
+                      <option value="15">15 questions</option>
+                      <option value="20">20 questions</option>
+                      <option value="30">30 questions</option>
+                      <option value="40">40 questions</option>
+                      <option value="999">Toutes les questions (48)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label for="admin-level-filter" class="form-label">Niveau de difficulté :</label>
+                    <select id="admin-level-filter" class="form-select">
+                      <option value="all" selected>Tous les niveaux (6-14 ans)</option>
+                      <option value="facile">⭐ Découverte / Facile (6-9 ans)</option>
+                      <option value="moyen">🔥 Confirmé / Moyen (10-14 ans)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="admin-divider" />
+
+              <!-- Chronomètre -->
+              <div class="form-group">
+                <div class="switch-row">
+                  <div>
+                    <label for="admin-timer-toggle" class="form-label" style="margin-bottom:2px;">⏱️ Activer le compte à rebours par question</label>
+                    <p class="form-help-text">Plus on répond vite, plus on gagne de points (jusqu'à 1000 pts par question) !</p>
+                  </div>
+                  <input type="checkbox" id="admin-timer-toggle" class="toggle-checkbox" />
+                </div>
+
+                <div id="admin-timer-seconds-wrap" class="form-group hidden" style="margin-top: 10px;">
+                  <label for="admin-timer-seconds" class="form-label">Temps par question :</label>
+                  <select id="admin-timer-seconds" class="form-select">
+                    <option value="10">10 secondes (Ultra rapide)</option>
+                    <option value="15">15 secondes</option>
+                    <option value="20" selected>20 secondes (Idéal en groupe)</option>
+                    <option value="30">30 secondes (Confortable)</option>
+                    <option value="45">45 secondes</option>
+                    <option value="60">60 secondes (1 minute)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Mélange aléatoire -->
+              <div class="form-group">
+                <div class="switch-row">
+                  <div>
+                    <label for="admin-shuffle-toggle" class="form-label" style="margin-bottom:2px;">🔀 Mélanger l'ordre des questions</label>
+                    <p class="form-help-text">Permet de varier l'ordre à chaque nouvelle partie.</p>
+                  </div>
+                  <input type="checkbox" id="admin-shuffle-toggle" class="toggle-checkbox" checked />
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne droite : Mode Individuel / Mode Équipes -->
+            <div class="admin-box">
+              <h2 class="admin-box-title">👥 Mode Individuel ou Mode Équipes</h2>
+
+              <div class="form-group">
+                <label class="form-label">Mode de jeu :</label>
+                <div class="radio-cards-row">
+                  <label class="radio-card">
+                    <input type="radio" name="adminGameMode" value="individual" checked />
+                    <span>🧒 Mode Individuel</span>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="adminGameMode" value="teams" />
+                    <span>👥 Mode Équipes</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Configuration du Mode Individuel -->
+              <div id="admin-indiv-config" class="form-group">
+                <label for="admin-player-name" class="form-label">Pseudo du joueur ou nom du groupe (optionnel) :</label>
+                <input type="text" id="admin-player-name" class="form-input" placeholder="Ex: Groupe Noël U9, Lucas, Champions MPHB..." />
+              </div>
+
+              <!-- Configuration du Mode Équipes -->
+              <div id="admin-teams-config" class="form-group hidden">
+                <div class="teams-config-header">
+                  <label class="form-label" style="margin:0;">Équipes participantes :</label>
+                  <button type="button" class="btn-small-accent" id="btn-add-team">➕ Ajouter une équipe</button>
+                </div>
+                <div id="admin-teams-list" class="admin-teams-list"></div>
+                <div class="teams-actions-bar">
+                  <button type="button" class="btn-ghost-small" id="btn-reset-teams-scores" style="color:#002b5c; border-color:#94a3b8;">
+                    🔄 Remettre les points des équipes à 0
+                  </button>
+                </div>
+              </div>
+
+              <hr class="admin-divider" />
+
+              <!-- Boutons d'action Animateur -->
+              <div class="admin-launch-actions">
+                <button type="button" class="btn-primary-giant" id="btn-admin-start-game" style="width:100%;">
+                  <span>🚀</span>
+                  <span>LANCER LA PARTIE MAINTENANT</span>
+                </button>
+
+                <button type="button" class="btn-kahoot-lobby-giant" id="btn-admin-open-lobby" style="width:100%;">
+                  <span>📡</span>
+                  <span>OUVRIR LE LOBBY AVEC CODE PIN</span>
+                </button>
+
+                <button type="button" class="btn-outline-danger" id="btn-admin-reset-quiz" style="width:100%;">
+                  <span>🔄</span>
+                  <span>RÉINITIALISER LE QUIZ &amp; LES SCORES</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 2 : CRÉER & GÉRER LES QUIZ ("MES QUIZ")
+             ================================================================ -->
+        <div id="tab-quizzes" class="admin-tab-content">
+          <div class="admin-section-toolbar">
+            <div>
+              <h2 class="admin-box-title" style="margin-bottom:4px;">📚 Studio Créateur de Quiz</h2>
+              <p class="form-help-text">Créez vos propres Quiz thématiques pour chaque groupe d'âge ou séance du stage de Noël.</p>
+            </div>
+            <button type="button" class="btn-primary-action" id="btn-open-quiz-creator">
+              ➕ Créer un nouveau Quiz
+            </button>
+          </div>
+
+          <!-- Formulaire de création / modification d'un Quiz -->
+          <div id="quiz-creator-modal" class="admin-editor-panel hidden">
+            <div class="editor-panel-header">
+              <h3 id="quiz-creator-title">✨ Créer un nouveau Quiz</h3>
+              <button type="button" class="btn-close-editor" id="btn-close-quiz-creator">✖ Fermer</button>
+            </div>
+
+            <form id="form-quiz-creator">
+              <input type="hidden" id="edit-quiz-id" value="" />
+
+              <div class="form-row-2col">
+                <div class="form-group">
+                  <label for="quiz-title-input" class="form-label">Titre du Quiz *</label>
+                  <input type="text" id="quiz-title-input" class="form-input" required placeholder="Ex: 🎄 Quiz du Jeudi Matin - Groupe U11" />
+                </div>
+
+                <div class="form-group">
+                  <label for="quiz-desc-input" class="form-label">Description / Sous-titre</label>
+                  <input type="text" id="quiz-desc-input" class="form-input" placeholder="Ex: 10 questions sur le terrain, les règles et l'arbitrage" />
+                </div>
+              </div>
+
+              <div class="form-row-3col">
+                <div class="form-group">
+                  <label class="form-label">Chronomètre par défaut</label>
+                  <select id="quiz-timer-enabled-input" class="form-select">
+                    <option value="true">Oui (Chronomètre activé)</option>
+                    <option value="false">Non (Sans limite de temps)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="quiz-timer-sec-input" class="form-label">Temps par question (secondes)</label>
+                  <input type="number" id="quiz-timer-sec-input" class="form-input" min="5" max="120" value="20" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Ordre des questions</label>
+                  <select id="quiz-shuffle-input" class="form-select">
+                    <option value="true">🔀 Mélanger aléatoirement</option>
+                    <option value="false">📋 Garder l'ordre exact de sélection</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Sélection des questions à inclure dans ce quiz -->
+              <div class="quiz-questions-picker">
+                <div class="picker-header">
+                  <div>
+                    <label class="form-label" style="margin-bottom:2px;">
+                      Sélectionnez les questions de ce Quiz :
+                      <span class="picker-counter-badge" id="quiz-picker-count">0 question sélectionnée</span>
+                    </label>
+                  </div>
+                  <div class="picker-quick-btns">
+                    <button type="button" class="btn-small-outline" id="btn-picker-random-10">🎲 Tirer 10 au hasard</button>
+                    <button type="button" class="btn-small-outline" id="btn-picker-select-all">✅ Tout cocher</button>
+                    <button type="button" class="btn-small-outline" id="btn-picker-clear-all">⬜ Tout décocher</button>
+                    <button type="button" class="btn-small-accent" id="btn-picker-new-question">➕ Créer une question</button>
+                  </div>
+                </div>
+
+                <div class="picker-filters">
+                  <input type="text" id="picker-search-input" class="form-input" placeholder="🔍 Rechercher une question..." />
+                  <select id="picker-category-filter" class="form-select">
+                    <option value="all">Toutes les catégories</option>
+                  </select>
+                </div>
+
+                <div id="quiz-picker-questions-list" class="picker-questions-list"></div>
+              </div>
+
+              <div class="editor-panel-actions">
+                <button type="button" class="btn-secondary-action" id="btn-cancel-quiz-creator">Annuler</button>
+                <button type="submit" class="btn-primary-action">💾 Enregistrer ce Quiz</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Liste des Quiz existants -->
+          <div id="admin-quizzes-list" class="admin-quizzes-grid"></div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 3 : BANQUE DE QUESTIONS (AJOUTER / MODIFIER / SUPPRIMER)
+             ================================================================ -->
+        <div id="tab-questions" class="admin-tab-content">
+          <div class="admin-section-toolbar">
+            <div>
+              <h2 class="admin-box-title" style="margin-bottom:4px;">❓ Gestion de la Banque de Questions</h2>
+              <p class="form-help-text">Ajoutez, modifiez ou supprimez des questions directement avec les 4 briques colorées (▲ Rouge, ◆ Bleu, ● Jaune, ■ Vert).</p>
+            </div>
+            <button type="button" class="btn-primary-action" id="btn-open-question-editor">
+              ➕ Ajouter une nouvelle question
+            </button>
+          </div>
+
+          <!-- Formulaire d'ajout / modification d'une question -->
+          <div id="question-editor-modal" class="admin-editor-panel hidden">
+            <div class="editor-panel-header">
+              <h3 id="question-editor-title">➕ Ajouter une nouvelle question</h3>
+              <button type="button" class="btn-close-editor" id="btn-close-question-editor">✖ Fermer</button>
+            </div>
+
+            <form id="form-question-editor">
+              <input type="hidden" id="edit-question-id" value="" />
+
+              <div class="form-row-3col">
+                <div class="form-group">
+                  <label for="q-category-input" class="form-label">Catégorie *</label>
+                  <select id="q-category-input" class="form-select" required></select>
+                </div>
+
+                <div class="form-group">
+                  <label for="q-level-input" class="form-label">Niveau d'âge *</label>
+                  <select id="q-level-input" class="form-select">
+                    <option value="facile">⭐ Découverte / Facile (6-9 ans)</option>
+                    <option value="moyen">🔥 Confirmé / Moyen (10-14 ans)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="q-illo-input" class="form-label">Illustration visuelle</label>
+                  <select id="q-illo-input" class="form-select">
+                    <option value="players">🤾 Joueurs &amp; Postes</option>
+                    <option value="court">🏟️ Terrain &amp; Lignes (6m/9m)</option>
+                    <option value="referee">🟨 Arbitre, Sifflet &amp; Cartons</option>
+                    <option value="goalie">🧤 Gardien de but &amp; Cage</option>
+                    <option value="shot">🚀 Tir en suspension</option>
+                    <option value="dribble">⛹️ Dribble &amp; Règle des 3 pas</option>
+                    <option value="pass">🤝 Passe &amp; Réception</option>
+                    <option value="christmas">🎄 Spécial Stage de Noël MPHB</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="q-text-input" class="form-label">Énoncé de la question *</label>
+                <input type="text" id="q-text-input" class="form-input" required placeholder="Ex: Combien de pas peut-on faire avec le ballon sans dribbler ?" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Les 4 réponses possibles (cochez le bouton rond de la BONNE réponse) *</label>
+                <div class="options-editor-grid">
+                  <div class="option-editor-row k-editor-red">
+                    <label class="correct-radio-label" title="Définir ▲ Rouge comme bonne réponse">
+                      <input type="radio" name="qCorrectOption" value="0" checked />
+                      <span class="option-letter-badge k-red">▲</span>
+                    </label>
+                    <input type="text" id="q-opt-0" class="form-input" required placeholder="Réponse Triangle Rouge (▲)" />
+                  </div>
+
+                  <div class="option-editor-row k-editor-blue">
+                    <label class="correct-radio-label" title="Définir ◆ Bleu comme bonne réponse">
+                      <input type="radio" name="qCorrectOption" value="1" />
+                      <span class="option-letter-badge k-blue">◆</span>
+                    </label>
+                    <input type="text" id="q-opt-1" class="form-input" required placeholder="Réponse Losange Bleu (◆)" />
+                  </div>
+
+                  <div class="option-editor-row k-editor-yellow">
+                    <label class="correct-radio-label" title="Définir ● Jaune comme bonne réponse">
+                      <input type="radio" name="qCorrectOption" value="2" />
+                      <span class="option-letter-badge k-yellow">●</span>
+                    </label>
+                    <input type="text" id="q-opt-2" class="form-input" required placeholder="Réponse Cercle Jaune (●)" />
+                  </div>
+
+                  <div class="option-editor-row k-editor-green">
+                    <label class="correct-radio-label" title="Définir ■ Vert comme bonne réponse">
+                      <input type="radio" name="qCorrectOption" value="3" />
+                      <span class="option-letter-badge k-green">■</span>
+                    </label>
+                    <input type="text" id="q-opt-3" class="form-input" required placeholder="Réponse Carré Vert (■)" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="q-explanation-input" class="form-label">Explication pédagogique (affichée après la validation) *</label>
+                <textarea id="q-explanation-input" class="form-textarea" rows="3" required placeholder="Expliquez la règle simplement pour aider les enfants à comprendre..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="q-attach-quiz-select" class="form-label">Ajouter aussi cette question à un Quiz existant (optionnel) :</label>
+                <select id="q-attach-quiz-select" class="form-select">
+                  <option value="">-- Ne pas ajouter à un quiz spécifique (ajouter seulement à la banque) --</option>
+                </select>
+              </div>
+
+              <div class="editor-panel-actions">
+                <button type="button" class="btn-secondary-action" id="btn-cancel-question-editor">Annuler</button>
+                <button type="submit" class="btn-primary-action">💾 Enregistrer la question</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Barre de recherche et filtres de la banque de questions -->
+          <div class="bank-filters-bar">
+            <input type="text" id="bank-search-input" class="form-input" placeholder="🔍 Rechercher un mot-clé (ex: gardien, 7 mètres, zone, carton...)" />
+            <select id="bank-category-filter" class="form-select">
+              <option value="all">Toutes les catégories</option>
+            </select>
+            <select id="bank-level-filter" class="form-select">
+              <option value="all">Tous les niveaux</option>
+              <option value="facile">⭐ Facile / Découverte</option>
+              <option value="moyen">🔥 Moyen / Confirmé</option>
+            </select>
+          </div>
+
+          <!-- Liste des questions -->
+          <div id="admin-questions-list" class="admin-questions-list"></div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 4 : RÉPONSES & EXPLICATIONS (ANTISÈCHE ANIMATEUR)
+             ================================================================ -->
+        <div id="tab-answers" class="admin-tab-content">
+          <div class="admin-section-toolbar">
+            <div>
+              <h2 class="admin-box-title" style="margin-bottom:4px;">📖 Fiche Réponses &amp; Explications pour l'Animateur</h2>
+              <p class="form-help-text">Consultez ou imprimez toutes les bonnes réponses et explications officielles avant votre séance.</p>
+            </div>
+            <div class="toolbar-actions-group">
+              <select id="answers-filter-quiz" class="form-select">
+                <option value="all">Afficher toutes les questions (48)</option>
+              </select>
+              <button type="button" class="btn-secondary-action" id="btn-print-answers">
+                🖨️ Imprimer la fiche animateur
+              </button>
+            </div>
+          </div>
+
+          <div id="admin-answers-sheet" class="answers-sheet-grid"></div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 5 : SCORES DE LA SESSION & CLASSEMENT ÉQUIPES
+             ================================================================ -->
+        <div id="tab-scores" class="admin-tab-content">
+          <div class="admin-grid-2col">
+            <div class="admin-box">
+              <div class="admin-section-toolbar" style="margin-bottom: 12px;">
+                <h2 class="admin-box-title" style="margin:0;">👥 Scores Actuels des Équipes</h2>
+                <button type="button" class="btn-small-outline" id="btn-scores-reset-teams">🔄 Remettre à zéro</button>
+              </div>
+              <p class="form-help-text" style="margin-bottom: 14px;">
+                Vous pouvez ajuster les points manuellement (+100 / -100) pour accorder un bonus de fair-play ou de bonne explication orale !
+              </p>
+              <div id="admin-live-teams-scoreboard" class="admin-teams-scoreboard"></div>
+            </div>
+
+            <div class="admin-box">
+              <div class="admin-section-toolbar" style="margin-bottom: 12px;">
+                <h2 class="admin-box-title" style="margin:0;">📜 Historique des Parties de la Session</h2>
+                <button type="button" class="btn-small-outline" id="btn-clear-session-history">🗑️ Vider l'historique</button>
+              </div>
+              <div id="admin-session-history-list" class="session-history-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 6 : LOGO OFFICIEL MPHB & SAUVEGARDE FICHIERS
+             ================================================================ -->
+        <div id="tab-settings" class="admin-tab-content">
+          <div class="admin-grid-2col">
+            <div class="admin-box">
+              <h2 class="admin-box-title">🛡️ Logo Officiel du Marseille Provence Handball</h2>
+              <p class="form-help-text">
+                Le logo officiel du Marseille Provence Handball (1961) est intégré par défaut. Ses proportions sont strictement respectées : il n'est jamais déformé ni étiré.
+              </p>
+
+              <div class="logo-preview-showcase">
+                <div id="admin-logo-preview" class="admin-logo-preview-box"></div>
+              </div>
+
+              <div class="logo-upload-controls">
+                <label for="input-upload-logo" class="btn-primary-action" style="cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                  <span>📁 Remplacer par un autre fichier image...</span>
+                </label>
+                <input type="file" id="input-upload-logo" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none;" />
+
+                <button type="button" class="btn-secondary-action" id="btn-reset-default-logo">
+                  🔄 Rétablir le logo officiel MPHB 1961 par défaut
+                </button>
+              </div>
+
+              <hr class="admin-divider" />
+
+              <h3 class="admin-box-title" style="font-size:1.08rem; margin-bottom:8px;">🔐 Code Secret d'Accès au Panel Admin</h3>
+              <p class="form-help-text" style="margin-bottom:10px;">
+                Empêche les enfants d'ouvrir le Mode Animateur ou de voir les réponses. (Code par défaut : <strong>1961</strong> ou <strong>MPHB</strong>).
+              </p>
+              <form id="form-change-admin-code" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <input type="text" id="input-new-admin-code" class="form-input" style="flex:1; min-width:150px;" placeholder="Nouveau code secret..." maxlength="20" required />
+                <button type="submit" class="btn-primary-action">💾 Modifier le code</button>
+              </form>
+            </div>
+
+            <div class="admin-box">
+              <h2 class="admin-box-title">💾 Sauvegarde Locale &amp; Fichiers de Questions</h2>
+              <p class="form-help-text">
+                Vos nouveaux Quiz et vos questions sont sauvegardés automatiquement dans le navigateur. Vous pouvez aussi les exporter dans un fichier pour les transférer sur un autre ordinateur ou mettre à jour <code>data/questions.js</code>.
+              </p>
+
+              <div class="file-actions-stack">
+                <button type="button" class="btn-primary-action" id="btn-export-js-file">
+                  📥 Télécharger le fichier « questions.js » mis à jour
+                </button>
+
+                <button type="button" class="btn-secondary-action" id="btn-export-json-file">
+                  📥 Exporter les Quiz &amp; Questions en JSON (.json)
+                </button>
+
+                <label for="input-import-json" class="btn-secondary-action" style="cursor:pointer; text-align:center;">
+                  📤 Importer un fichier de Quiz &amp; Questions (.json)
+                </label>
+                <input type="file" id="input-import-json" accept=".json,application/json" style="display:none;" />
+
+                <hr class="admin-divider" />
+
+                <button type="button" class="btn-outline-danger" id="btn-restore-factory-data">
+                  ⚠️ Restaurer la banque initiale d'origine (48 questions &amp; 5 quiz)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ÉCRAN 5 : MANETTE JOUEUR (REJOINDRE AVEC UN CODE PIN)
+         ====================================================================== -->
+    <section id="screen-player" class="screen">
+      <div class="player-controller-card">
+        <!-- Étape 1 : Entrer le CODE PIN et son Pseudo / Équipe -->
+        <div id="player-step-join" class="player-step-join">
+          <div class="kahoot-shapes-strip" style="margin-bottom: 12px;">
+            <span class="k-mini-badge k-red">▲</span>
+            <span class="k-mini-badge k-blue">◆</span>
+            <span class="k-mini-badge k-yellow">●</span>
+            <span class="k-mini-badge k-green">■</span>
+          </div>
+          <h1 class="player-join-title">QUIZ LIVE — MPHB</h1>
+          <p class="player-join-sub">Entre le CODE PIN affiché sur l'écran de l'animateur !</p>
+
+          <form id="form-player-join" class="player-join-form">
+            <input type="text" id="player-pin-input" class="player-pin-field" placeholder="CODE PIN (ex: 482915)" maxlength="9" required />
+            <input type="text" id="player-nickname-input" class="player-pin-field" placeholder="Ton Pseudo ou Nom d'Équipe" maxlength="24" required />
+            <div class="player-avatar-picker">
+              <label class="quick-label" style="text-align:center;">Choisis ta mascotte :</label>
+              <select id="player-avatar-input" class="quick-select" style="text-align:center; font-size:1.1rem;">
+                <option value="🦁">🦁 Lion Bleu MPHB</option>
+                <option value="🤾">🤾 Tireur en Suspension</option>
+                <option value="🎄">🎄 Champion de Noël</option>
+                <option value="⭐">⭐ Étoile de Provence</option>
+                <option value="🔥">🔥 Bras de Feu</option>
+                <option value="🧤">🧤 Super Gardien</option>
+                <option value="🏆">🏆 Trophée d'Or</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-player-enter">VALIDER &amp; REJOINDRE !</button>
+          </form>
+        </div>
+
+        <!-- Étape 2 : Télécommande à 4 boutons géants (▲ ◆ ● ■) -->
+        <div id="player-step-pad" class="player-step-pad hidden">
+          <div class="player-topbar">
+            <span class="player-name-tag" id="player-pad-name">🦁 Équipe</span>
+            <span class="player-pin-tag" id="player-pad-pin">PIN : 482 915</span>
+            <span class="player-score-tag" id="player-pad-score">0 pt</span>
+          </div>
+
+          <div class="player-status-banner" id="player-pad-status">
+            👀 Regarde la question sur l'écran principal et appuie sur la bonne forme !
+          </div>
+
+          <!-- Les 4 boutons géants de la manette -->
+          <div class="player-pad-grid" id="player-pad-buttons">
+            <button type="button" class="player-pad-btn k-red" data-pad-idx="0" aria-label="Triangle Rouge">
+              <span class="pad-shape">▲</span>
+            </button>
+            <button type="button" class="player-pad-btn k-blue" data-pad-idx="1" aria-label="Losange Bleu">
+              <span class="pad-shape">◆</span>
+            </button>
+            <button type="button" class="player-pad-btn k-yellow" data-pad-idx="2" aria-label="Cercle Jaune">
+              <span class="pad-shape">●</span>
+            </button>
+            <button type="button" class="player-pad-btn k-green" data-pad-idx="3" aria-label="Carré Vert">
+              <span class="pad-shape">■</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       MODALE DE CONFIGURATION RAPIDE DES ÉQUIPES AVANT COUP D'ENVOI
+       ======================================================================== -->
+  <div id="modal-teams-kickoff" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-teams-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="modal-teams-title">👥 Équipes du Quiz — Coup d'envoi !</h2>
+        <button type="button" class="btn-close-editor" id="btn-close-teams-modal">✖</button>
+      </div>
+      <p class="form-help-text" style="margin-bottom: 14px;">
+        Inscrivez les équipes d'enfants. Vous pourrez jouer soit en <strong>Tour par tour</strong>, soit en faisant <strong>voter toutes les équipes</strong> à chaque question !
+      </p>
+
+      <div id="modal-teams-list" class="admin-teams-list"></div>
+
+      <div style="margin: 12px 0 20px;">
+        <button type="button" class="btn-small-accent" id="btn-modal-add-team">➕ Ajouter une équipe</button>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary-action" id="btn-cancel-teams-modal">Annuler</button>
+        <button type="button" class="btn-kahoot-lobby-giant" id="btn-modal-go-lobby" style="padding: 12px 18px; font-size: 0.95rem;">
+          📡 Ouvrir le Lobby PIN
+        </button>
+        <button type="button" class="btn-primary-giant" id="btn-confirm-teams-kickoff" style="padding: 12px 22px; font-size: 1rem;">
+          <span>🤾</span>
+          <span>LANCER LE QUIZ !</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE DE CONNEXION SÉCURISÉE — PANEL ADMIN / MODE ANIMATEUR
+       ======================================================================== -->
+  <div id="modal-admin-login" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-admin-login-title">
+    <div class="modal-card admin-login-modal-card" id="admin-login-card">
+      <div class="modal-header">
+        <div>
+          <span class="admin-login-badge">🔒 ACCÈS RÉSERVÉ AUX ANIMATEURS</span>
+          <h2 id="modal-admin-login-title">Connexion Panel Admin — MPHB</h2>
+        </div>
+        <button type="button" class="btn-close-editor" id="btn-close-admin-login">✖</button>
+      </div>
+
+      <p class="form-help-text" style="margin-bottom: 16px;">
+        Veuillez entrer le code secret animateur pour accéder à la création de quiz, au paramétrage et à la fiche des réponses.
+      </p>
+
+      <form id="form-admin-login">
+        <div class="admin-code-input-wrap">
+          <input
+            type="password"
+            id="admin-code-input"
+            class="admin-code-field"
+            placeholder="Entrez le code secret..."
+            autocomplete="off"
+            required
+          />
+          <button type="button" class="btn-toggle-code-eye" id="btn-toggle-code-eye" title="Afficher / Masquer le code">
+            👁️
+          </button>
+        </div>
+
+        <p id="admin-login-error" class="admin-login-error hidden">
+          ❌ Code incorrect ! Cet espace est réservé aux animateurs du MPHB.
+        </p>
+
+        <div class="modal-footer" style="margin-top: 20px;">
+          <button type="button" class="btn-secondary-action" id="btn-cancel-admin-login">Annuler</button>
+          <button type="submit" class="btn-primary-giant" style="padding: 12px 24px; font-size: 1rem;">
+            <span>🔓</span>
+            <span>DÉVERROUILLER</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast non-bloquante -->
+  <div id="toast-notification" class="toast-notification hidden" role="status" aria-live="polite"></div>
+
+  <!-- ========================================================================
+       SCRIPTS LOCAUX (100% Hors-ligne, sans dépendance externe)
+       ======================================================================== -->
+  <script src="data/questions.js"></script>
+  <script src="js/illustrations.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/confetti.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

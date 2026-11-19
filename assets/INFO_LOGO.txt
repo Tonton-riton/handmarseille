@@ -1,0 +1,17 @@
+============================================================================
+INTÉGRATION DU LOGO OFFICIEL DU MARSEILLE PROVENCE HANDBALL (MPHB)
+============================================================================
+
+Vous avez 2 méthodes très simples pour afficher le fichier du logo officiel :
+
+MÉTHODE 1 (Directement depuis l'interface du site) :
+1. Ouvrez le site (index.html).
+2. Cliquez sur « MODE ANIMATEUR / ADMIN ».
+3. Allez dans l'onglet « 6. Logo MPHB & Fichiers ».
+4. Cliquez sur « Choisir le fichier du logo officiel... » et sélectionnez votre image (PNG, JPG, SVG ou WEBP).
+-> Le logo est immédiatement enregistré et affiché sur tout le site sans aucune déformation !
+
+MÉTHODE 2 (Dans ce dossier assets) :
+Placez simplement votre fichier dans ce dossier "assets" en le nommant :
+logo-mphb.png
+-> Le site le détectera et l'affichera automatiquement au lancement !
