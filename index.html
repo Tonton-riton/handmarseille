@@ -222,9 +222,9 @@
           </button>
         </div>
 
-        <!-- Cartes des 4 thématiques avec lancement rapide par catégorie -->
+        <!-- Cartes des thématiques avec lancement rapide par catégorie -->
         <div class="home-categories-section">
-          <h2 class="home-section-heading">📚 Les 4 grandes catégories du Quiz (clique sur une catégorie pour la lancer !)</h2>
+          <h2 class="home-section-heading" id="home-categories-heading">📚 Les 4 catégories du Quiz (clique sur une catégorie pour la lancer !)</h2>
           <div class="categories-grid" id="home-categories-grid"></div>
         </div>
       </div>
@@ -624,29 +624,34 @@
         <nav class="admin-tabs" role="tablist" aria-label="Navigation du Panel Admin">
           <button type="button" class="admin-tab active" data-tab="tab-config" role="tab" aria-selected="true">
             <span>🎮</span>
-            <span>1. Configurer &amp; Lancer</span>
+            <span>1. Configurer</span>
           </button>
           <button type="button" class="admin-tab" data-tab="tab-quizzes" role="tab" aria-selected="false">
             <span>📚</span>
-            <span>2. Créer &amp; Gérer les Quiz</span>
+            <span>2. Mes Quiz</span>
             <span class="tab-pill" id="admin-tab-quizzes-count">5</span>
           </button>
           <button type="button" class="admin-tab" data-tab="tab-questions" role="tab" aria-selected="false">
             <span>❓</span>
-            <span>3. Banque de Questions</span>
+            <span>3. Questions</span>
             <span class="tab-pill" id="admin-tab-questions-count">48</span>
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-taxonomy" role="tab" aria-selected="false">
+            <span>🏷️</span>
+            <span>4. Catégories &amp; Difficultés</span>
+            <span class="tab-pill" id="admin-tab-taxonomy-count">4 / 2</span>
           </button>
           <button type="button" class="admin-tab" data-tab="tab-answers" role="tab" aria-selected="false">
             <span>📖</span>
-            <span>4. Réponses &amp; Explications</span>
+            <span>5. Réponses</span>
           </button>
           <button type="button" class="admin-tab" data-tab="tab-scores" role="tab" aria-selected="false">
             <span>🏆</span>
-            <span>5. Scores &amp; Équipes</span>
+            <span>6. Scores</span>
           </button>
           <button type="button" class="admin-tab" data-tab="tab-settings" role="tab" aria-selected="false">
             <span>⚙️</span>
-            <span>6. Logo MPHB &amp; Fichiers</span>
+            <span>7. Paramètres</span>
           </button>
         </nav>
 
@@ -846,7 +851,7 @@
                 </div>
               </div>
 
-              <div class="form-row-3col">
+              <div class="form-row-4col">
                 <div class="form-group">
                   <label class="form-label">Chronomètre par défaut</label>
                   <select id="quiz-timer-enabled-input" class="form-select">
@@ -856,7 +861,7 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="quiz-timer-sec-input" class="form-label">Temps par question (secondes)</label>
+                  <label for="quiz-timer-sec-input" class="form-label">Temps / question (s)</label>
                   <input type="number" id="quiz-timer-sec-input" class="form-input" min="5" max="120" value="20" />
                 </div>
 
@@ -864,7 +869,14 @@
                   <label class="form-label">Ordre des questions</label>
                   <select id="quiz-shuffle-input" class="form-select">
                     <option value="true">🔀 Mélanger aléatoirement</option>
-                    <option value="false">📋 Garder l'ordre exact de sélection</option>
+                    <option value="false">📋 Garder l'ordre exact</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="quiz-level-input" class="form-label">Difficulté du Quiz</label>
+                  <select id="quiz-level-input" class="form-select">
+                    <option value="all">🎯 Tous niveaux</option>
                   </select>
                 </div>
               </div>
@@ -882,14 +894,19 @@
                     <button type="button" class="btn-small-outline" id="btn-picker-random-10">🎲 Tirer 10 au hasard</button>
                     <button type="button" class="btn-small-outline" id="btn-picker-select-all">✅ Tout cocher</button>
                     <button type="button" class="btn-small-outline" id="btn-picker-clear-all">⬜ Tout décocher</button>
+                    <button type="button" class="btn-small-outline" id="btn-quiz-quick-add-cat">➕ Nouvelle catégorie</button>
+                    <button type="button" class="btn-small-outline" id="btn-quiz-quick-add-level">➕ Nouvelle difficulté</button>
                     <button type="button" class="btn-small-accent" id="btn-picker-new-question">➕ Créer une question</button>
                   </div>
                 </div>
 
-                <div class="picker-filters">
+                <div class="picker-filters picker-filters-3col">
                   <input type="text" id="picker-search-input" class="form-input" placeholder="🔍 Rechercher une question..." />
                   <select id="picker-category-filter" class="form-select">
                     <option value="all">Toutes les catégories</option>
+                  </select>
+                  <select id="picker-level-filter" class="form-select">
+                    <option value="all">Toutes les difficultés</option>
                   </select>
                 </div>
 
@@ -916,9 +933,14 @@
               <h2 class="admin-box-title" style="margin-bottom:4px;">❓ Gestion de la Banque de Questions</h2>
               <p class="form-help-text">Ajoutez, modifiez ou supprimez des questions directement avec les 4 briques colorées (▲ Rouge, ◆ Bleu, ● Jaune, ■ Vert).</p>
             </div>
-            <button type="button" class="btn-primary-action" id="btn-open-question-editor">
-              ➕ Ajouter une nouvelle question
-            </button>
+            <div class="toolbar-actions-group">
+              <button type="button" class="btn-secondary-action" id="btn-goto-taxonomy-from-q">
+                🏷️ Gérer Catégories &amp; Difficultés
+              </button>
+              <button type="button" class="btn-primary-action" id="btn-open-question-editor">
+                ➕ Ajouter une nouvelle question
+              </button>
+            </div>
           </div>
 
           <!-- Formulaire d'ajout / modification d'une question -->
@@ -934,15 +956,18 @@
               <div class="form-row-3col">
                 <div class="form-group">
                   <label for="q-category-input" class="form-label">Catégorie *</label>
-                  <select id="q-category-input" class="form-select" required></select>
+                  <div class="select-with-add">
+                    <select id="q-category-input" class="form-select" required></select>
+                    <button type="button" class="btn-inline-add" id="btn-q-quick-add-cat" title="Créer une nouvelle catégorie">➕</button>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="q-level-input" class="form-label">Niveau d'âge *</label>
-                  <select id="q-level-input" class="form-select">
-                    <option value="facile">⭐ Découverte / Facile (6-9 ans)</option>
-                    <option value="moyen">🔥 Confirmé / Moyen (10-14 ans)</option>
-                  </select>
+                  <label for="q-level-input" class="form-label">Niveau de difficulté *</label>
+                  <div class="select-with-add">
+                    <select id="q-level-input" class="form-select" required></select>
+                    <button type="button" class="btn-inline-add" id="btn-q-quick-add-level" title="Créer une nouvelle difficulté">➕</button>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -1043,7 +1068,129 @@
         </div>
 
         <!-- ================================================================
-             ONGLET 4 : RÉPONSES & EXPLICATIONS (ANTISÈCHE ANIMATEUR)
+             ONGLET 4 : CATÉGORIES & DIFFICULTÉS (CRÉER / MODIFIER / SUPPRIMER)
+             ================================================================ -->
+        <div id="tab-taxonomy" class="admin-tab-content">
+          <div class="admin-section-toolbar">
+            <div>
+              <h2 class="admin-box-title" style="margin-bottom:4px;">🏷️ Gérer les Catégories &amp; les Niveaux de Difficulté</h2>
+              <p class="form-help-text">Créez de nouvelles catégories de questions et de nouveaux niveaux de difficulté, puis créez un Quiz dessus en 1 clic !</p>
+            </div>
+            <button type="button" class="btn-primary-action" id="btn-taxonomy-create-quiz">
+              📚 Créer un nouveau Quiz
+            </button>
+          </div>
+
+          <div class="admin-grid-2col">
+            <!-- COLONNE GAUCHE : CATÉGORIES DE QUESTIONS -->
+            <div class="admin-box">
+              <h3 class="admin-box-title">📁 Catégories de Questions</h3>
+
+              <form id="form-category-editor" class="taxonomy-form">
+                <input type="hidden" id="edit-cat-id" value="" />
+                <div class="form-group">
+                  <label for="cat-name-input" class="form-label">Nom de la catégorie *</label>
+                  <input type="text" id="cat-name-input" class="form-input" required placeholder="Ex: Histoire du MPHB, Spécial Noël, Nutrition..." />
+                </div>
+
+                <div class="form-row-3col">
+                  <div class="form-group">
+                    <label for="cat-short-input" class="form-label">Nom court (badge)</label>
+                    <input type="text" id="cat-short-input" class="form-input" placeholder="Ex: Histoire" />
+                  </div>
+                  <div class="form-group">
+                    <label for="cat-icon-input" class="form-label">Icône / Emoji</label>
+                    <select id="cat-icon-input" class="form-select">
+                      <option value="🤾">🤾 Handball</option>
+                      <option value="📋">📋 Règles</option>
+                      <option value="🏟️">🏟️ Terrain</option>
+                      <option value="🟨">🟨 Arbitrage</option>
+                      <option value="🎄">🎄 Noël</option>
+                      <option value="🏆">🏆 Trophée</option>
+                      <option value="⭐">⭐ Étoile</option>
+                      <option value="⚡">⚡ Éclair</option>
+                      <option value="🧠">🧠 Culture</option>
+                      <option value="🎯">🎯 Cible</option>
+                      <option value="🛡️">🛡️ Défense / Club</option>
+                      <option value="🧤">🧤 Gardien</option>
+                      <option value="🔥">🔥 Défi</option>
+                      <option value="🎁">🎁 Bonus</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="cat-color-input" class="form-label">Couleur</label>
+                    <input type="color" id="cat-color-input" class="form-input form-color-input" value="#0066cc" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="cat-desc-input" class="form-label">Description courte (affichée sur l'accueil)</label>
+                  <input type="text" id="cat-desc-input" class="form-input" placeholder="Ex: Questions spéciales sur le club et le stage de Noël." />
+                </div>
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="submit" class="btn-primary-action" id="btn-save-category">➕ Ajouter la catégorie</button>
+                  <button type="button" class="btn-secondary-action hidden" id="btn-cancel-edit-category">Annuler</button>
+                </div>
+              </form>
+
+              <hr class="admin-divider" />
+
+              <div id="admin-categories-manage-list" class="taxonomy-manage-list"></div>
+            </div>
+
+            <!-- COLONNE DROITE : NIVEAUX DE DIFFICULTÉ -->
+            <div class="admin-box">
+              <h3 class="admin-box-title">🎯 Niveaux de Difficulté</h3>
+
+              <form id="form-level-editor" class="taxonomy-form">
+                <input type="hidden" id="edit-level-id" value="" />
+                <div class="form-group">
+                  <label for="level-name-input" class="form-label">Nom de la difficulté *</label>
+                  <input type="text" id="level-name-input" class="form-input" required placeholder="Ex: Baby-Hand, Difficile, Expert, Champion..." />
+                </div>
+
+                <div class="form-row-3col">
+                  <div class="form-group">
+                    <label for="level-age-input" class="form-label">Tranche d'âge / Détail</label>
+                    <input type="text" id="level-age-input" class="form-input" placeholder="Ex: 14 ans et +, U9..." />
+                  </div>
+                  <div class="form-group">
+                    <label for="level-icon-input" class="form-label">Icône / Emoji</label>
+                    <select id="level-icon-input" class="form-select">
+                      <option value="🏆">🏆 Expert / Or</option>
+                      <option value="⭐">⭐ Découverte</option>
+                      <option value="🔥">🔥 Confirmé</option>
+                      <option value="🐣">🐣 Baby-Hand</option>
+                      <option value="⚡">⚡ Difficile</option>
+                      <option value="💎">💎 Pro / Élite</option>
+                      <option value="🧠">🧠 Stratège</option>
+                      <option value="🎯">🎯 Précision</option>
+                      <option value="🥇">🥇 Champion</option>
+                      <option value="🎄">🎄 Spécial Noël</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="level-color-input" class="form-label">Couleur</label>
+                    <input type="color" id="level-color-input" class="form-input form-color-input" value="#e63946" />
+                  </div>
+                </div>
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="submit" class="btn-primary-action" id="btn-save-level">➕ Ajouter la difficulté</button>
+                  <button type="button" class="btn-secondary-action hidden" id="btn-cancel-edit-level">Annuler</button>
+                </div>
+              </form>
+
+              <hr class="admin-divider" />
+
+              <div id="admin-levels-manage-list" class="taxonomy-manage-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================
+             ONGLET 5 : RÉPONSES & EXPLICATIONS (ANTISÈCHE ANIMATEUR)
              ================================================================ -->
         <div id="tab-answers" class="admin-tab-content">
           <div class="admin-section-toolbar">
@@ -1065,7 +1212,7 @@
         </div>
 
         <!-- ================================================================
-             ONGLET 5 : SCORES DE LA SESSION & CLASSEMENT ÉQUIPES
+             ONGLET 6 : SCORES DE LA SESSION & CLASSEMENT ÉQUIPES
              ================================================================ -->
         <div id="tab-scores" class="admin-tab-content">
           <div class="admin-grid-2col">
@@ -1091,7 +1238,7 @@
         </div>
 
         <!-- ================================================================
-             ONGLET 6 : LOGO OFFICIEL MPHB & SAUVEGARDE FICHIERS
+             ONGLET 7 : LOGO OFFICIEL MPHB & SAUVEGARDE FICHIERS
              ================================================================ -->
         <div id="tab-settings" class="admin-tab-content">
           <div class="admin-grid-2col">
@@ -1332,6 +1479,98 @@
             <span>🔓</span>
             <span>DÉVERROUILLER</span>
           </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE RAPIDE : CRÉER UNE NOUVELLE CATÉGORIE (SANS QUITTER L'ÉDITEUR)
+       ======================================================================== -->
+  <div id="modal-quick-category" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-quick-cat-title">
+    <div class="modal-card" style="max-width:480px;">
+      <div class="modal-header">
+        <h2 id="modal-quick-cat-title">📁 Nouvelle Catégorie de Questions</h2>
+        <button type="button" class="btn-close-editor" id="btn-close-quick-cat">✖</button>
+      </div>
+      <form id="form-quick-category">
+        <div class="form-group">
+          <label for="quick-cat-name" class="form-label">Nom de la catégorie *</label>
+          <input type="text" id="quick-cat-name" class="form-input" required placeholder="Ex: Histoire du MPHB, Spécial Noël..." />
+        </div>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="quick-cat-icon" class="form-label">Icône</label>
+            <select id="quick-cat-icon" class="form-select">
+              <option value="🤾">🤾 Handball</option>
+              <option value="🎄">🎄 Noël</option>
+              <option value="🏆">🏆 Trophée</option>
+              <option value="⭐">⭐ Étoile</option>
+              <option value="⚡">⚡ Éclair</option>
+              <option value="🧠">🧠 Culture</option>
+              <option value="🎯">🎯 Cible</option>
+              <option value="🛡️">🛡️ Club</option>
+              <option value="🧤">🧤 Gardien</option>
+              <option value="🔥">🔥 Défi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quick-cat-color" class="form-label">Couleur</label>
+            <input type="color" id="quick-cat-color" class="form-input form-color-input" value="#7c3aed" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="quick-cat-desc" class="form-label">Description courte</label>
+          <input type="text" id="quick-cat-desc" class="form-input" placeholder="Ex: Questions créées spécialement pour ce stage." />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-action" id="btn-cancel-quick-cat">Annuler</button>
+          <button type="submit" class="btn-primary-action">✅ Créer la catégorie</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE RAPIDE : CRÉER UNE NOUVELLE DIFFICULTÉ (SANS QUITTER L'ÉDITEUR)
+       ======================================================================== -->
+  <div id="modal-quick-level" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-quick-level-title">
+    <div class="modal-card" style="max-width:460px;">
+      <div class="modal-header">
+        <h2 id="modal-quick-level-title">🎯 Nouveau Niveau de Difficulté</h2>
+        <button type="button" class="btn-close-editor" id="btn-close-quick-level">✖</button>
+      </div>
+      <form id="form-quick-level">
+        <div class="form-group">
+          <label for="quick-level-name" class="form-label">Nom de la difficulté *</label>
+          <input type="text" id="quick-level-name" class="form-input" required placeholder="Ex: Difficile, Expert, Baby-Hand..." />
+        </div>
+        <div class="form-group">
+          <label for="quick-level-age" class="form-label">Tranche d'âge / Précision (optionnel)</label>
+          <input type="text" id="quick-level-age" class="form-input" placeholder="Ex: 14 ans et +, U7, Coachs..." />
+        </div>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="quick-level-icon" class="form-label">Icône</label>
+            <select id="quick-level-icon" class="form-select">
+              <option value="🏆">🏆 Expert</option>
+              <option value="⚡">⚡ Difficile</option>
+              <option value="🐣">🐣 Baby-Hand</option>
+              <option value="💎">💎 Pro / Élite</option>
+              <option value="🧠">🧠 Stratège</option>
+              <option value="🔥">🔥 Intense</option>
+              <option value="⭐">⭐ Découverte</option>
+              <option value="🎄">🎄 Noël</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quick-level-color" class="form-label">Couleur</label>
+            <input type="color" id="quick-level-color" class="form-input form-color-input" value="#e63946" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary-action" id="btn-cancel-quick-level">Annuler</button>
+          <button type="submit" class="btn-primary-action">✅ Créer la difficulté</button>
         </div>
       </form>
     </div>

@@ -9,6 +9,8 @@
   "use strict";
 
   var STORAGE_KEYS = {
+    CATEGORIES: "mphb_categories_v1",
+    LEVELS: "mphb_levels_v1",
     QUESTIONS: "mphb_questions_bank_v1",
     QUIZZES: "mphb_quizzes_list_v1",
     TEAMS: "mphb_teams_list_v1",
@@ -59,6 +61,7 @@
 
   var state = {
     categories: window.MPHB_CATEGORIES ? JSON.parse(JSON.stringify(window.MPHB_CATEGORIES)) : [],
+    levels: window.MPHB_LEVELS ? JSON.parse(JSON.stringify(window.MPHB_LEVELS)) : [],
     questions: [],
     quizzes: [],
     teams: [],
@@ -68,6 +71,8 @@
     gamePin: "482 915",
     adminCode: "1961",
     adminUnlocked: false,
+    returnToQuizCreatorAfterQuestion: false,
+    quickModalContext: null,
 
     config: {
       sourceType: "preset",
@@ -163,6 +168,33 @@
   }
 
   function loadAllFromStorage() {
+    // 0a. Catégories
+    try {
+      var savedCats = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+      if (savedCats) {
+        var parsedCats = JSON.parse(savedCats);
+        if (Array.isArray(parsedCats) && parsedCats.length > 0) state.categories = parsedCats;
+      }
+    } catch (e) {}
+    if (!state.categories || state.categories.length === 0) {
+      state.categories = JSON.parse(JSON.stringify(window.MPHB_CATEGORIES || []));
+    }
+
+    // 0b. Niveaux de difficulté
+    try {
+      var savedLvls = localStorage.getItem(STORAGE_KEYS.LEVELS);
+      if (savedLvls) {
+        var parsedLvls = JSON.parse(savedLvls);
+        if (Array.isArray(parsedLvls) && parsedLvls.length > 0) state.levels = parsedLvls;
+      }
+    } catch (e) {}
+    if (!state.levels || state.levels.length === 0) {
+      state.levels = JSON.parse(JSON.stringify(window.MPHB_LEVELS || [
+        { id: "facile", name: "Découverte / Facile", ageRange: "6-9 ans", icon: "⭐", color: "#16A34A" },
+        { id: "moyen", name: "Confirmé / Moyen", ageRange: "10-14 ans", icon: "🔥", color: "#D97706" }
+      ]));
+    }
+
     // 1. Questions
     try {
       var savedQ = localStorage.getItem(STORAGE_KEYS.QUESTIONS);
@@ -262,6 +294,12 @@
     return state.gamePin;
   }
 
+  function saveCategories() {
+    try { localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(state.categories)); } catch (e) {}
+  }
+  function saveLevels() {
+    try { localStorage.setItem(STORAGE_KEYS.LEVELS, JSON.stringify(state.levels)); } catch (e) {}
+  }
   function saveQuestions() {
     try { localStorage.setItem(STORAGE_KEYS.QUESTIONS, JSON.stringify(state.questions)); } catch (e) {}
   }
@@ -447,6 +485,7 @@
     renderAdminConfigTab();
     renderAdminQuizzesTab();
     renderAdminQuestionsTab();
+    renderAdminTaxonomyTab();
     renderAdminAnswersTab();
     renderAdminScoresTab();
   }
@@ -455,7 +494,94 @@
     for (var i = 0; i < state.categories.length; i++) {
       if (state.categories[i].id === catId) return state.categories[i];
     }
-    return { id: catId, name: catId, shortName: catId, icon: "🤾", color: "#0055A4", description: "" };
+    return { id: catId, name: catId || "Autre", shortName: catId || "Autre", icon: "🤾", color: "#0055A4", description: "" };
+  }
+
+  function getLevelById(levelId) {
+    for (var i = 0; i < state.levels.length; i++) {
+      if (state.levels[i].id === levelId) return state.levels[i];
+    }
+    if (state.levels.length > 0 && !levelId) return state.levels[0];
+    return { id: levelId || "facile", name: levelId || "Découverte", ageRange: "", icon: "⭐", color: "#16A34A" };
+  }
+
+  function formatLevelLabel(lvl) {
+    if (!lvl) return "⭐ Découverte";
+    return (lvl.icon || "🎯") + " " + lvl.name + (lvl.ageRange ? " (" + lvl.ageRange + ")" : "");
+  }
+
+  function populateCategorySelect(selectEl, includeAll, allLabel, desiredVal) {
+    if (!selectEl) return;
+    var prevVal = desiredVal !== undefined ? desiredVal : selectEl.value;
+    var html = "";
+    if (includeAll) {
+      html += '<option value="all">' + escapeHtml(allLabel || "Toutes les catégories") + '</option>';
+    }
+    state.categories.forEach(function (c) {
+      html += '<option value="' + escapeHtml(c.id) + '">' + (c.icon || "🤾") + " " + escapeHtml(c.name) + '</option>';
+    });
+    selectEl.innerHTML = html;
+
+    var exists = false;
+    for (var i = 0; i < selectEl.options.length; i++) {
+      if (selectEl.options[i].value === prevVal) {
+        exists = true;
+        break;
+      }
+    }
+    if (exists) {
+      selectEl.value = prevVal;
+    } else if (includeAll) {
+      selectEl.value = "all";
+    } else if (selectEl.options.length > 0) {
+      selectEl.selectedIndex = 0;
+    }
+  }
+
+  function populateLevelSelect(selectEl, includeAll, allLabel, desiredVal) {
+    if (!selectEl) return;
+    var prevVal = desiredVal !== undefined ? desiredVal : selectEl.value;
+    var html = "";
+    if (includeAll) {
+      html += '<option value="all">' + escapeHtml(allLabel || "Toutes les difficultés") + '</option>';
+    }
+    state.levels.forEach(function (lvl) {
+      html += '<option value="' + escapeHtml(lvl.id) + '">' + escapeHtml(formatLevelLabel(lvl)) + '</option>';
+    });
+    selectEl.innerHTML = html;
+
+    var exists = false;
+    for (var i = 0; i < selectEl.options.length; i++) {
+      if (selectEl.options[i].value === prevVal) {
+        exists = true;
+        break;
+      }
+    }
+    if (exists) {
+      selectEl.value = prevVal;
+    } else if (includeAll) {
+      selectEl.value = "all";
+    } else if (selectEl.options.length > 0) {
+      selectEl.selectedIndex = 0;
+    }
+  }
+
+  function slugifyId(prefix, label, existingList) {
+    var base = String(label || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 24);
+    if (!base) base = prefix + "_" + Date.now();
+    var candidate = base;
+    var n = 2;
+    while (existingList.some(function (item) { return item.id === candidate; })) {
+      candidate = base + "_" + n;
+      n++;
+    }
+    return candidate;
   }
 
   function formatQuizOptionTitle(qz) {
@@ -491,21 +617,30 @@
 
     renderHomeSummaryBadges();
 
+    var catHeading = document.getElementById("home-categories-heading");
+    if (catHeading) {
+      var catLen = state.categories.length;
+      catHeading.textContent =
+        "📚 " + (catLen === 4 ? "Les 4 grandes catégories du Quiz" : ("Les " + catLen + " catégories du Quiz")) +
+        " (clique sur une catégorie pour la lancer !)";
+    }
+
     var catGrid = document.getElementById("home-categories-grid");
     var catHtml = "";
     state.categories.forEach(function (cat) {
       var count = state.questions.filter(function (q) { return q.category === cat.id; }).length;
+      var borderCol = cat.color || "#0055A4";
       catHtml +=
-        '<div class="category-home-card" data-cat-id="' + escapeHtml(cat.id) + '" role="button" tabindex="0">' +
+        '<div class="category-home-card" data-cat-id="' + escapeHtml(cat.id) + '" style="border-top: 6px solid ' + escapeHtml(borderCol) + ';" role="button" tabindex="0">' +
           '<div>' +
             '<div class="cat-card-header">' +
-              '<span class="cat-card-icon">' + cat.icon + '</span>' +
-              '<span class="cat-card-count">' + count + ' questions</span>' +
+              '<span class="cat-card-icon" style="background:' + escapeHtml(borderCol) + '1a;">' + (cat.icon || "🤾") + '</span>' +
+              '<span class="cat-card-count">' + count + ' question' + (count > 1 ? "s" : "") + '</span>' +
             '</div>' +
             '<h3 class="cat-card-title">' + escapeHtml(cat.name) + '</h3>' +
-            '<p class="cat-card-desc">' + escapeHtml(cat.description) + '</p>' +
+            '<p class="cat-card-desc">' + escapeHtml(cat.description || "Questions thématiques MPHB.") + '</p>' +
           '</div>' +
-          '<span class="cat-card-play">▶ Lancer ce Quiz ➔</span>' +
+          '<span class="cat-card-play">' + (count > 0 ? "▶ Lancer ce Quiz ➔" : "➕ Ajouter des questions (Admin)") + '</span>' +
         '</div>';
     });
     catGrid.innerHTML = catHtml;
@@ -611,9 +746,14 @@
 
   function launchCategoryQuickQuiz(catId) {
     var cat = getCategoryById(catId);
+    var catQuestionsCount = state.questions.filter(function (q) { return q.category === catId; }).length;
+    if (catQuestionsCount === 0) {
+      showToast("⚠️ Aucune question dans « " + cat.name + " » pour l'instant ! Ajoutez-en dans le Mode Animateur.");
+      return;
+    }
     state.config.sourceType = "custom";
     state.config.selectedCategories = [catId];
-    state.config.questionCount = 12;
+    state.config.questionCount = Math.max(12, catQuestionsCount);
     state.config.levelFilter = "all";
     saveConfig();
     refreshAllUI();
@@ -1350,8 +1490,12 @@
     catBadge.textContent = cat.icon + " " + cat.name;
     catBadge.style.backgroundColor = cat.color || "#0055A4";
 
-    document.getElementById("quiz-level-badge").textContent =
-      q.level === "moyen" ? "🔥 Confirmé" : "⭐ Découverte";
+    var lvlObj = getLevelById(q.level);
+    var lvlBadge = document.getElementById("quiz-level-badge");
+    lvlBadge.textContent = (lvlObj.icon || "🎯") + " " + lvlObj.name;
+    if (lvlObj.color) {
+      lvlBadge.style.borderColor = lvlObj.color;
+    }
 
     var doubleBadge = document.getElementById("quiz-double-pts-badge");
     if (isDouble) {
@@ -2519,6 +2663,15 @@
 
     document.getElementById("picker-search-input").addEventListener("input", renderQuizPickerQuestions);
     document.getElementById("picker-category-filter").addEventListener("change", renderQuizPickerQuestions);
+    document.getElementById("picker-level-filter").addEventListener("change", renderQuizPickerQuestions);
+
+    document.getElementById("btn-quiz-quick-add-cat").addEventListener("click", function () {
+      openQuickCategoryModal("quiz-picker");
+    });
+
+    document.getElementById("btn-quiz-quick-add-level").addEventListener("click", function () {
+      openQuickLevelModal("quiz-creator");
+    });
 
     document.getElementById("btn-picker-select-all").addEventListener("click", function () {
       var visibleIds = getFilteredPickerQuestionIds();
@@ -2538,12 +2691,20 @@
       shuffleArray(pool);
       state.quizEditorSelectedIds = pool.slice(0, Math.min(10, pool.length));
       renderQuizPickerQuestions();
-      showToast("🎲 10 questions tirées au sort !");
+      showToast("🎲 " + state.quizEditorSelectedIds.length + " question(s) tirée(s) au sort !");
     });
 
     document.getElementById("btn-picker-new-question").addEventListener("click", function () {
+      var activeCat = document.getElementById("picker-category-filter").value;
+      var activeLvl = document.getElementById("picker-level-filter").value;
+      var quizLvl = document.getElementById("quiz-level-input").value;
+      var prefill = {
+        category: activeCat && activeCat !== "all" ? activeCat : null,
+        level: (activeLvl && activeLvl !== "all") ? activeLvl : (quizLvl && quizLvl !== "all" ? quizLvl : null)
+      };
+      state.returnToQuizCreatorAfterQuestion = true;
       switchAdminTab("tab-questions");
-      openQuestionEditor(null);
+      openQuestionEditor(null, prefill);
     });
 
     document.getElementById("form-quiz-creator").addEventListener("submit", function (e) {
@@ -2552,7 +2713,21 @@
     });
 
     // Onglet 3 : Banque de Questions
+    document.getElementById("btn-goto-taxonomy-from-q").addEventListener("click", function () {
+      window.MPHB_SOUND.playClick();
+      switchAdminTab("tab-taxonomy");
+    });
+
+    document.getElementById("btn-q-quick-add-cat").addEventListener("click", function () {
+      openQuickCategoryModal("question-editor");
+    });
+
+    document.getElementById("btn-q-quick-add-level").addEventListener("click", function () {
+      openQuickLevelModal("question-editor");
+    });
+
     document.getElementById("btn-open-question-editor").addEventListener("click", function () {
+      state.returnToQuizCreatorAfterQuestion = false;
       openQuestionEditor(null);
     });
     document.getElementById("btn-close-question-editor").addEventListener("click", closeQuestionEditor);
@@ -2567,13 +2742,53 @@
       saveQuestionFromEditorForm();
     });
 
-    // Onglet 4 : Fiche Réponses & Explications
+    // Onglet 4 : Catégories & Difficultés
+    document.getElementById("btn-taxonomy-create-quiz").addEventListener("click", function () {
+      window.MPHB_SOUND.playClick();
+      switchAdminTab("tab-quizzes");
+      openQuizCreator(null);
+    });
+
+    document.getElementById("form-category-editor").addEventListener("submit", function (e) {
+      e.preventDefault();
+      saveCategoryFromForm();
+    });
+    document.getElementById("btn-cancel-edit-category").addEventListener("click", resetCategoryForm);
+
+    document.getElementById("form-level-editor").addEventListener("submit", function (e) {
+      e.preventDefault();
+      saveLevelFromForm();
+    });
+    document.getElementById("btn-cancel-edit-level").addEventListener("click", resetLevelForm);
+
+    // Modales rapides (Catégorie & Difficulté depuis les éditeurs)
+    document.getElementById("btn-close-quick-cat").addEventListener("click", closeQuickCategoryModal);
+    document.getElementById("btn-cancel-quick-cat").addEventListener("click", closeQuickCategoryModal);
+    document.getElementById("modal-quick-category").addEventListener("click", function (e) {
+      if (e.target === this) closeQuickCategoryModal();
+    });
+    document.getElementById("form-quick-category").addEventListener("submit", function (e) {
+      e.preventDefault();
+      saveQuickCategory();
+    });
+
+    document.getElementById("btn-close-quick-level").addEventListener("click", closeQuickLevelModal);
+    document.getElementById("btn-cancel-quick-level").addEventListener("click", closeQuickLevelModal);
+    document.getElementById("modal-quick-level").addEventListener("click", function (e) {
+      if (e.target === this) closeQuickLevelModal();
+    });
+    document.getElementById("form-quick-level").addEventListener("submit", function (e) {
+      e.preventDefault();
+      saveQuickLevel();
+    });
+
+    // Onglet 5 : Fiche Réponses & Explications
     document.getElementById("answers-filter-quiz").addEventListener("change", renderAdminAnswersTab);
     document.getElementById("btn-print-answers").addEventListener("click", function () {
       window.print();
     });
 
-    // Onglet 5 : Scores & Historique
+    // Onglet 6 : Scores & Historique
     document.getElementById("btn-scores-reset-teams").addEventListener("click", function () {
       resetAllTeamScores();
       showToast("🔄 Scores des équipes remis à 0 !");
@@ -2586,7 +2801,7 @@
       showToast("🗑️ Historique de la session effacé.");
     });
 
-    // Onglet 6 : Logo MPHB & Import/Export
+    // Onglet 7 : Logo MPHB & Import/Export
     document.getElementById("input-upload-logo").addEventListener("change", handleLogoFileUpload);
     document.getElementById("btn-reset-default-logo").addEventListener("click", function () {
       state.customLogoDataUrl = null;
@@ -2600,13 +2815,20 @@
     document.getElementById("input-import-json").addEventListener("change", importQuestionsFromJSONFile);
 
     document.getElementById("btn-restore-factory-data").addEventListener("click", function () {
-      if (confirm("Voulez-vous vraiment restaurer les 48 questions et les 5 Quiz d'origine du Marseille Provence Handball ?")) {
+      if (confirm("Voulez-vous vraiment restaurer les catégories, difficultés, 48 questions et 5 Quiz d'origine du Marseille Provence Handball ?")) {
+        state.categories = JSON.parse(JSON.stringify(window.MPHB_CATEGORIES || []));
+        state.levels = JSON.parse(JSON.stringify(window.MPHB_LEVELS || []));
         state.questions = JSON.parse(JSON.stringify(window.INITIAL_QUESTIONS || []));
         state.quizzes = JSON.parse(JSON.stringify(window.INITIAL_QUIZZES || []));
+        state.config.selectedCategories = state.categories.map(function (c) { return c.id; });
+        state.config.levelFilter = "all";
+        saveCategories();
+        saveLevels();
         saveQuestions();
         saveQuizzes();
+        saveConfig();
         refreshAllUI();
-        showToast("✅ Banque officielle de 48 questions et 5 Quiz restaurée !");
+        showToast("✅ Banque officielle (catégories, difficultés, 48 questions & 5 Quiz) restaurée !");
       }
     });
   }
@@ -2678,8 +2900,14 @@
       });
     }
 
-    document.getElementById("admin-question-count").value = String(state.config.questionCount);
-    document.getElementById("admin-level-filter").value = state.config.levelFilter;
+    var countSelect = document.getElementById("admin-question-count");
+    var allOpt = countSelect ? countSelect.querySelector('option[value="999"]') : null;
+    if (allOpt) allOpt.textContent = "Toutes les questions (" + state.questions.length + ")";
+    countSelect.value = String(state.config.questionCount);
+
+    var levelFilterEl = document.getElementById("admin-level-filter");
+    populateLevelSelect(levelFilterEl, true, "Tous les niveaux", state.config.levelFilter || "all");
+    state.config.levelFilter = levelFilterEl.value;
 
     var timerToggle = document.getElementById("admin-timer-toggle");
     timerToggle.checked = !!state.config.timerEnabled;
@@ -2723,6 +2951,13 @@
 
   function renderAdminQuizzesTab() {
     document.getElementById("admin-tab-quizzes-count").textContent = String(state.quizzes.length);
+    var creatorModal = document.getElementById("quiz-creator-modal");
+    if (creatorModal && !creatorModal.classList.contains("hidden")) {
+      populateCategorySelect(document.getElementById("picker-category-filter"), true, "Toutes les catégories");
+      populateLevelSelect(document.getElementById("picker-level-filter"), true, "Toutes les difficultés");
+      populateLevelSelect(document.getElementById("quiz-level-input"), true, "🎯 Tous niveaux");
+      renderQuizPickerQuestions();
+    }
     var grid = document.getElementById("admin-quizzes-list");
     var html = "";
 
@@ -2730,6 +2965,14 @@
       var validCount = countValidQuestionsInQuiz(qz);
       var timerBadge = qz.timerEnabled ? ("⏱️ " + (qz.timerSeconds || 20) + "s") : "⏱️ Libre";
       var shuffleBadge = qz.shuffleQuestions !== false ? "🔀 Aléatoire" : "📋 Ordre fixe";
+      var levelChipHtml = "";
+      if (qz.level && qz.level !== "all") {
+        var qzLvl = getLevelById(qz.level);
+        levelChipHtml =
+          '<span class="summary-chip" style="border-color:' + escapeHtml(qzLvl.color || "#0066cc") + '; color:' + escapeHtml(qzLvl.color || "#0066cc") + '; font-weight:800;">' +
+            escapeHtml((qzLvl.icon || "🎯") + " " + qzLvl.name) +
+          '</span>';
+      }
 
       html +=
         '<div class="quiz-admin-card">' +
@@ -2737,7 +2980,8 @@
             '<h3 class="quiz-admin-card-title">' + escapeHtml(qz.title) + '</h3>' +
             '<p class="quiz-admin-card-desc">' + escapeHtml(qz.description || "Quiz personnalisé MPHB") + '</p>' +
             '<div class="quiz-admin-meta">' +
-              '<span class="summary-chip">❓ ' + validCount + ' questions</span>' +
+              '<span class="summary-chip">❓ ' + validCount + ' question' + (validCount > 1 ? "s" : "") + '</span>' +
+              levelChipHtml +
               '<span class="summary-chip">' + timerBadge + '</span>' +
               '<span class="summary-chip">' + shuffleBadge + '</span>' +
             '</div>' +
@@ -2827,16 +3071,17 @@
     }
   }
 
-  function openQuizCreator(quizId) {
+  function openQuizCreator(quizId, presetOptions) {
     var modal = document.getElementById("quiz-creator-modal");
     modal.classList.remove("hidden");
 
+    var opts = presetOptions || {};
     var catSelect = document.getElementById("picker-category-filter");
-    var catHtml = '<option value="all">Toutes les catégories</option>';
-    state.categories.forEach(function (c) {
-      catHtml += '<option value="' + escapeHtml(c.id) + '">' + c.icon + ' ' + escapeHtml(c.name) + '</option>';
-    });
-    catSelect.innerHTML = catHtml;
+    var lvlFilterSelect = document.getElementById("picker-level-filter");
+    var quizLevelSelect = document.getElementById("quiz-level-input");
+
+    populateCategorySelect(catSelect, true, "Toutes les catégories", opts.categoryFilter || "all");
+    populateLevelSelect(lvlFilterSelect, true, "Toutes les difficultés", opts.levelFilter || "all");
     document.getElementById("picker-search-input").value = "";
 
     if (quizId) {
@@ -2849,16 +3094,21 @@
       document.getElementById("quiz-timer-enabled-input").value = qz.timerEnabled ? "true" : "false";
       document.getElementById("quiz-timer-sec-input").value = String(qz.timerSeconds || 20);
       document.getElementById("quiz-shuffle-input").value = qz.shuffleQuestions !== false ? "true" : "false";
+      populateLevelSelect(quizLevelSelect, true, "🎯 Tous niveaux", qz.level || "all");
       state.quizEditorSelectedIds = Array.isArray(qz.questionIds) ? qz.questionIds.slice() : [];
     } else {
       document.getElementById("quiz-creator-title").textContent = "✨ Créer un nouveau Quiz sur-mesure";
       document.getElementById("edit-quiz-id").value = "";
-      document.getElementById("quiz-title-input").value = "";
-      document.getElementById("quiz-desc-input").value = "";
+      document.getElementById("quiz-title-input").value = opts.title || "";
+      document.getElementById("quiz-desc-input").value = opts.description || "";
       document.getElementById("quiz-timer-enabled-input").value = "true";
       document.getElementById("quiz-timer-sec-input").value = "20";
       document.getElementById("quiz-shuffle-input").value = "true";
+      populateLevelSelect(quizLevelSelect, true, "🎯 Tous niveaux", opts.levelFilter || "all");
       state.quizEditorSelectedIds = [];
+      if (opts.autoSelectFiltered) {
+        state.quizEditorSelectedIds = getFilteredPickerQuestionIds();
+      }
     }
 
     renderQuizPickerQuestions();
@@ -2872,11 +3122,13 @@
   function getFilteredPickerQuestionIds() {
     var search = (document.getElementById("picker-search-input").value || "").toLowerCase().trim();
     var catFilter = document.getElementById("picker-category-filter").value;
+    var lvlFilter = document.getElementById("picker-level-filter").value;
 
     return state.questions.filter(function (q) {
       var catOk = catFilter === "all" || q.category === catFilter;
+      var lvlOk = lvlFilter === "all" || q.level === lvlFilter;
       var searchOk = !search || q.question.toLowerCase().indexOf(search) !== -1;
-      return catOk && searchOk;
+      return catOk && lvlOk && searchOk;
     }).map(function (q) { return q.id; });
   }
 
@@ -2887,26 +3139,32 @@
 
     var search = (document.getElementById("picker-search-input").value || "").toLowerCase().trim();
     var catFilter = document.getElementById("picker-category-filter").value;
+    var lvlFilter = document.getElementById("picker-level-filter").value;
 
     var listEl = document.getElementById("quiz-picker-questions-list");
     var html = "";
 
     state.questions.forEach(function (q) {
       var catOk = catFilter === "all" || q.category === catFilter;
+      var lvlOk = lvlFilter === "all" || q.level === lvlFilter;
       var searchOk = !search || q.question.toLowerCase().indexOf(search) !== -1;
-      if (!catOk || !searchOk) return;
+      if (!catOk || !lvlOk || !searchOk) return;
 
       var cat = getCategoryById(q.category);
+      var lvl = getLevelById(q.level);
       var checked = state.quizEditorSelectedIds.indexOf(q.id) !== -1 ? " checked" : "";
       html +=
         '<label class="picker-q-item">' +
           '<input type="checkbox" class="picker-q-checkbox" value="' + escapeHtml(q.id) + '"' + checked + ' />' +
-          '<span style="color:' + cat.color + '; font-weight:900;">[' + cat.icon + ' ' + escapeHtml(cat.shortName) + ']</span>' +
+          '<span style="color:' + escapeHtml(cat.color || "#0055A4") + '; font-weight:900; white-space:nowrap;">[' + (cat.icon || "🤾") + ' ' + escapeHtml(cat.shortName || cat.name) + ']</span>' +
+          '<span class="picker-lvl-tag" style="border-color:' + escapeHtml(lvl.color || "#16A34A") + '; color:' + escapeHtml(lvl.color || "#16A34A") + ';">' + escapeHtml((lvl.icon || "🎯") + " " + lvl.name) + '</span>' +
           '<span>' + escapeHtml(q.question) + '</span>' +
         '</label>';
     });
 
-    if (!html) html = '<p class="form-help-text" style="padding:12px;">Aucune question trouvée.</p>';
+    if (!html) {
+      html = '<p class="form-help-text" style="padding:12px;">Aucune question dans ce filtre. Cliquez sur <strong>« ➕ Créer une question »</strong> juste au-dessus pour en ajouter une directement à ce Quiz !</p>';
+    }
     listEl.innerHTML = html;
 
     var boxes = listEl.querySelectorAll(".picker-q-checkbox");
@@ -2930,6 +3188,7 @@
     var timerEnabled = document.getElementById("quiz-timer-enabled-input").value === "true";
     var timerSeconds = parseInt(document.getElementById("quiz-timer-sec-input").value, 10) || 20;
     var shuffleQuestions = document.getElementById("quiz-shuffle-input").value === "true";
+    var quizLevel = document.getElementById("quiz-level-input").value || "all";
 
     if (!title) {
       showToast("⚠️ Veuillez donner un titre à votre Quiz.");
@@ -2948,6 +3207,7 @@
         existing.timerEnabled = timerEnabled;
         existing.timerSeconds = timerSeconds;
         existing.shuffleQuestions = shuffleQuestions;
+        existing.level = quizLevel;
         existing.questionIds = state.quizEditorSelectedIds.slice();
       }
       showToast("✅ Quiz « " + title + " » mis à jour !");
@@ -2955,10 +3215,11 @@
       var newQuiz = {
         id: "quiz_" + Date.now(),
         title: title,
-        description: desc || (state.quizEditorSelectedIds.length + " questions sélectionnées"),
+        description: desc || (state.quizEditorSelectedIds.length + " question(s) sélectionnée(s)"),
         timerEnabled: timerEnabled,
         timerSeconds: timerSeconds,
         shuffleQuestions: shuffleQuestions,
+        level: quizLevel,
         questionIds: state.quizEditorSelectedIds.slice()
       };
       state.quizzes.unshift(newQuiz);
@@ -2986,18 +3247,20 @@
   function renderAdminQuestionsTab() {
     document.getElementById("admin-tab-questions-count").textContent = String(state.questions.length);
 
-    var catFilterEl = document.getElementById("bank-category-filter");
-    if (catFilterEl.options.length <= 1) {
-      var cHtml = '<option value="all">Toutes les catégories</option>';
-      state.categories.forEach(function (c) {
-        cHtml += '<option value="' + escapeHtml(c.id) + '">' + c.icon + ' ' + escapeHtml(c.name) + '</option>';
-      });
-      catFilterEl.innerHTML = cHtml;
+    var qModal = document.getElementById("question-editor-modal");
+    if (qModal && !qModal.classList.contains("hidden")) {
+      populateCategorySelect(document.getElementById("q-category-input"), false);
+      populateLevelSelect(document.getElementById("q-level-input"), false);
     }
+
+    var catFilterEl = document.getElementById("bank-category-filter");
+    var lvlFilterEl = document.getElementById("bank-level-filter");
+    populateCategorySelect(catFilterEl, true, "Toutes les catégories");
+    populateLevelSelect(lvlFilterEl, true, "Toutes les difficultés");
 
     var search = (document.getElementById("bank-search-input").value || "").toLowerCase().trim();
     var catVal = catFilterEl.value;
-    var lvlVal = document.getElementById("bank-level-filter").value;
+    var lvlVal = lvlFilterEl.value;
 
     var filtered = state.questions.filter(function (q) {
       var catOk = catVal === "all" || q.category === catVal;
@@ -3014,6 +3277,20 @@
 
     filtered.forEach(function (q) {
       var cat = getCategoryById(q.category);
+      var lvl = getLevelById(q.level);
+
+      var catOptsHtml = "";
+      state.categories.forEach(function (c) {
+        var sel = c.id === q.category ? " selected" : "";
+        catOptsHtml += '<option value="' + escapeHtml(c.id) + '"' + sel + '>' + (c.icon || "🤾") + " " + escapeHtml(c.name) + '</option>';
+      });
+
+      var lvlOptsHtml = "";
+      state.levels.forEach(function (l) {
+        var sel = l.id === q.level ? " selected" : "";
+        lvlOptsHtml += '<option value="' + escapeHtml(l.id) + '"' + sel + '>' + escapeHtml(formatLevelLabel(l)) + '</option>';
+      });
+
       var optsHtml = "";
       for (var i = 0; i < 4; i++) {
         var isGood = i === q.correctIndex;
@@ -3032,10 +3309,12 @@
         '<div class="q-bank-card">' +
           '<div class="q-bank-top">' +
             '<div class="q-bank-badges">' +
-              '<span class="category-badge" style="background:' + cat.color + '; font-size:0.78rem; padding:4px 10px;">' +
-                cat.icon + ' ' + escapeHtml(cat.name) +
-              '</span>' +
-              '<span class="level-badge">' + (q.level === "moyen" ? "🔥 Confirmé" : "⭐ Découverte") + '</span>' +
+              '<select class="q-bank-inline-select q-bank-inline-cat" data-q-id="' + escapeHtml(q.id) + '" style="border-color:' + escapeHtml(cat.color || "#0055A4") + '; color:' + escapeHtml(cat.color || "#0055A4") + ';" title="Changer la catégorie de cette question">' +
+                catOptsHtml +
+              '</select>' +
+              '<select class="q-bank-inline-select q-bank-inline-lvl" data-q-id="' + escapeHtml(q.id) + '" style="border-color:' + escapeHtml(lvl.color || "#16A34A") + '; color:' + escapeHtml(lvl.color || "#16A34A") + ';" title="Changer la difficulté de cette question">' +
+                lvlOptsHtml +
+              '</select>' +
             '</div>' +
             '<div class="q-bank-actions">' +
               '<button type="button" class="btn-small-outline btn-edit-q" data-q-id="' + escapeHtml(q.id) + '">✏️ Éditeur complet</button>' +
@@ -3052,6 +3331,38 @@
 
     if (!html) html = '<p class="form-help-text" style="padding:16px;">Aucune question ne correspond à votre recherche.</p>';
     listEl.innerHTML = html;
+
+    // Écouteur : Changer la catégorie directement depuis la carte
+    var inlineCats = listEl.querySelectorAll(".q-bank-inline-cat");
+    for (var ic = 0; ic < inlineCats.length; ic++) {
+      inlineCats[ic].addEventListener("change", function () {
+        var qId = this.getAttribute("data-q-id");
+        var targetQ = state.questions.find(function (item) { return item.id === qId; });
+        if (targetQ) {
+          targetQ.category = this.value;
+          saveQuestions();
+          refreshAllUI();
+          var newCat = getCategoryById(this.value);
+          showToast("📁 Catégorie mise à jour : " + (newCat.icon || "🤾") + " " + newCat.name);
+        }
+      });
+    }
+
+    // Écouteur : Changer la difficulté directement depuis la carte
+    var inlineLvls = listEl.querySelectorAll(".q-bank-inline-lvl");
+    for (var il = 0; il < inlineLvls.length; il++) {
+      inlineLvls[il].addEventListener("change", function () {
+        var qId = this.getAttribute("data-q-id");
+        var targetQ = state.questions.find(function (item) { return item.id === qId; });
+        if (targetQ) {
+          targetQ.level = this.value;
+          saveQuestions();
+          refreshAllUI();
+          var newLvl = getLevelById(this.value);
+          showToast("🎯 Difficulté mise à jour : " + formatLevelLabel(newLvl));
+        }
+      });
+    }
 
     // Écouteur : Modifier directement le texte d'une des 4 réponses sur la carte
     var inlineInputs = listEl.querySelectorAll(".inline-opt-input");
@@ -3089,6 +3400,7 @@
     var editBtns = listEl.querySelectorAll(".btn-edit-q");
     for (var e = 0; e < editBtns.length; e++) {
       editBtns[e].addEventListener("click", function () {
+        state.returnToQuizCreatorAfterQuestion = false;
         openQuestionEditor(this.getAttribute("data-q-id"));
       });
     }
@@ -3125,16 +3437,15 @@
     }
   }
 
-  function openQuestionEditor(questionId) {
+  function openQuestionEditor(questionId, prefillOptions) {
     var modal = document.getElementById("question-editor-modal");
     modal.classList.remove("hidden");
 
+    var prefill = prefillOptions || {};
     var catSelect = document.getElementById("q-category-input");
-    var cHtml = "";
-    state.categories.forEach(function (c) {
-      cHtml += '<option value="' + escapeHtml(c.id) + '">' + c.icon + ' ' + escapeHtml(c.name) + '</option>';
-    });
-    catSelect.innerHTML = cHtml;
+    var lvlSelect = document.getElementById("q-level-input");
+    var defaultCatId = state.categories[0] ? state.categories[0].id : "regles";
+    var defaultLvlId = state.levels[0] ? state.levels[0].id : "facile";
 
     var attachSelect = document.getElementById("q-attach-quiz-select");
     var aHtml = '<option value="">-- Ne pas ajouter à un Quiz spécifique (ajouter seulement à la banque) --</option>';
@@ -3148,8 +3459,8 @@
       if (!q) return;
       document.getElementById("question-editor-title").textContent = "✏️ Modifier la question";
       document.getElementById("edit-question-id").value = q.id;
-      catSelect.value = q.category;
-      document.getElementById("q-level-input").value = q.level || "facile";
+      populateCategorySelect(catSelect, false, "", q.category || defaultCatId);
+      populateLevelSelect(lvlSelect, false, "", q.level || defaultLvlId);
       document.getElementById("q-illo-input").value = q.illustration || "players";
       document.getElementById("q-text-input").value = q.question;
       for (var i = 0; i < 4; i++) {
@@ -3161,10 +3472,12 @@
       }
       document.getElementById("q-explanation-input").value = q.explanation || "";
     } else {
-      document.getElementById("question-editor-title").textContent = "➕ Ajouter une nouvelle question";
+      document.getElementById("question-editor-title").textContent = state.returnToQuizCreatorAfterQuestion
+        ? "➕ Créer une nouvelle question pour votre Quiz"
+        : "➕ Ajouter une nouvelle question";
       document.getElementById("edit-question-id").value = "";
-      catSelect.value = "regles";
-      document.getElementById("q-level-input").value = "facile";
+      populateCategorySelect(catSelect, false, "", prefill.category || defaultCatId);
+      populateLevelSelect(lvlSelect, false, "", prefill.level || defaultLvlId);
       document.getElementById("q-illo-input").value = "players";
       document.getElementById("q-text-input").value = "";
       for (var j = 0; j < 4; j++) {
@@ -3188,6 +3501,10 @@
 
   function closeQuestionEditor() {
     document.getElementById("question-editor-modal").classList.add("hidden");
+    if (state.returnToQuizCreatorAfterQuestion) {
+      state.returnToQuizCreatorAfterQuestion = false;
+      switchAdminTab("tab-quizzes");
+    }
   }
 
   function saveQuestionFromEditorForm() {
@@ -3252,6 +3569,7 @@
       }
     }
 
+    var returnToCreator = state.returnToQuizCreatorAfterQuestion;
     if (!document.getElementById("quiz-creator-modal").classList.contains("hidden") && savedId) {
       if (state.quizEditorSelectedIds.indexOf(savedId) === -1) {
         state.quizEditorSelectedIds.push(savedId);
@@ -3259,8 +3577,466 @@
     }
 
     saveQuestions();
-    closeQuestionEditor();
+    state.returnToQuizCreatorAfterQuestion = false;
+    document.getElementById("question-editor-modal").classList.add("hidden");
     refreshAllUI();
+
+    if (returnToCreator) {
+      switchAdminTab("tab-quizzes");
+      populateCategorySelect(document.getElementById("picker-category-filter"), true, "Toutes les catégories");
+      populateLevelSelect(document.getElementById("picker-level-filter"), true, "Toutes les difficultés");
+      renderQuizPickerQuestions();
+      var qModal = document.getElementById("quiz-creator-modal");
+      if (qModal) qModal.scrollIntoView({ behavior: "smooth", block: "start" });
+      showToast("✅ Question ajoutée et cochée dans votre Quiz !");
+    }
+  }
+
+  // ==========================================================================
+  // 11B. ONGLET 4 : GESTION DES CATÉGORIES & NIVEAUX DE DIFFICULTÉ + MODALES RAPIDES
+  // ==========================================================================
+  function renderAdminTaxonomyTab() {
+    var pill = document.getElementById("admin-tab-taxonomy-count");
+    if (pill) pill.textContent = state.categories.length + " / " + state.levels.length;
+
+    // 1. Liste des catégories
+    var catListEl = document.getElementById("admin-categories-manage-list");
+    if (catListEl) {
+      var cHtml = "";
+      state.categories.forEach(function (cat) {
+        var qCount = state.questions.filter(function (q) { return q.category === cat.id; }).length;
+        cHtml +=
+          '<div class="taxonomy-item-card" style="border-left: 5px solid ' + escapeHtml(cat.color || "#0055A4") + ';">' +
+            '<div class="taxonomy-item-info">' +
+              '<div class="taxonomy-item-head">' +
+                '<span class="taxonomy-icon-badge" style="background:' + escapeHtml(cat.color || "#0055A4") + '1a;">' + (cat.icon || "🤾") + '</span>' +
+                '<div>' +
+                  '<div class="taxonomy-item-name">' + escapeHtml(cat.name) + '</div>' +
+                  '<div class="taxonomy-item-sub">' + escapeHtml(cat.description || "Catégorie personnalisée MPHB") + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<span class="taxonomy-count-pill">' + qCount + ' question' + (qCount > 1 ? "s" : "") + '</span>' +
+            '</div>' +
+            '<div class="taxonomy-item-actions">' +
+              '<button type="button" class="btn-small-outline btn-tax-add-q-cat" data-cat-id="' + escapeHtml(cat.id) + '">➕ Question</button>' +
+              '<button type="button" class="btn-small-accent btn-tax-quiz-cat" data-cat-id="' + escapeHtml(cat.id) + '">📚 Créer Quiz</button>' +
+              '<button type="button" class="btn-small-outline btn-tax-edit-cat" data-cat-id="' + escapeHtml(cat.id) + '">✏️ Modifier</button>' +
+              (state.categories.length > 1
+                ? '<button type="button" class="btn-small-outline btn-tax-del-cat" data-cat-id="' + escapeHtml(cat.id) + '" style="color:#b91c1c; border-color:#fca5a5;">🗑️</button>'
+                : '') +
+            '</div>' +
+          '</div>';
+      });
+      catListEl.innerHTML = cHtml;
+
+      var addQCatBtns = catListEl.querySelectorAll(".btn-tax-add-q-cat");
+      for (var i = 0; i < addQCatBtns.length; i++) {
+        addQCatBtns[i].addEventListener("click", function () {
+          var cid = this.getAttribute("data-cat-id");
+          state.returnToQuizCreatorAfterQuestion = false;
+          switchAdminTab("tab-questions");
+          openQuestionEditor(null, { category: cid });
+        });
+      }
+
+      var quizCatBtns = catListEl.querySelectorAll(".btn-tax-quiz-cat");
+      for (var j = 0; j < quizCatBtns.length; j++) {
+        quizCatBtns[j].addEventListener("click", function () {
+          var cid = this.getAttribute("data-cat-id");
+          var catObj = getCategoryById(cid);
+          switchAdminTab("tab-quizzes");
+          openQuizCreator(null, {
+            categoryFilter: cid,
+            title: (catObj.icon || "🤾") + " Quiz : " + catObj.name,
+            description: "Quiz thématique sur la catégorie " + catObj.name,
+            autoSelectFiltered: true
+          });
+        });
+      }
+
+      var editCatBtns = catListEl.querySelectorAll(".btn-tax-edit-cat");
+      for (var k = 0; k < editCatBtns.length; k++) {
+        editCatBtns[k].addEventListener("click", function () {
+          editCategoryById(this.getAttribute("data-cat-id"));
+        });
+      }
+
+      var delCatBtns = catListEl.querySelectorAll(".btn-tax-del-cat");
+      for (var m = 0; m < delCatBtns.length; m++) {
+        delCatBtns[m].addEventListener("click", function () {
+          deleteCategoryById(this.getAttribute("data-cat-id"));
+        });
+      }
+    }
+
+    // 2. Liste des difficultés
+    var lvlListEl = document.getElementById("admin-levels-manage-list");
+    if (lvlListEl) {
+      var lHtml = "";
+      state.levels.forEach(function (lvl) {
+        var qCount = state.questions.filter(function (q) { return q.level === lvl.id; }).length;
+        lHtml +=
+          '<div class="taxonomy-item-card" style="border-left: 5px solid ' + escapeHtml(lvl.color || "#16A34A") + ';">' +
+            '<div class="taxonomy-item-info">' +
+              '<div class="taxonomy-item-head">' +
+                '<span class="taxonomy-icon-badge" style="background:' + escapeHtml(lvl.color || "#16A34A") + '1a;">' + (lvl.icon || "🎯") + '</span>' +
+                '<div>' +
+                  '<div class="taxonomy-item-name">' + escapeHtml(lvl.name) + '</div>' +
+                  '<div class="taxonomy-item-sub">' + escapeHtml(lvl.ageRange ? ("Tranche : " + lvl.ageRange) : "Niveau de difficulté personnalisé") + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<span class="taxonomy-count-pill">' + qCount + ' question' + (qCount > 1 ? "s" : "") + '</span>' +
+            '</div>' +
+            '<div class="taxonomy-item-actions">' +
+              '<button type="button" class="btn-small-outline btn-tax-add-q-lvl" data-lvl-id="' + escapeHtml(lvl.id) + '">➕ Question</button>' +
+              '<button type="button" class="btn-small-accent btn-tax-quiz-lvl" data-lvl-id="' + escapeHtml(lvl.id) + '">📚 Créer Quiz</button>' +
+              '<button type="button" class="btn-small-outline btn-tax-edit-lvl" data-lvl-id="' + escapeHtml(lvl.id) + '">✏️ Modifier</button>' +
+              (state.levels.length > 1
+                ? '<button type="button" class="btn-small-outline btn-tax-del-lvl" data-lvl-id="' + escapeHtml(lvl.id) + '" style="color:#b91c1c; border-color:#fca5a5;">🗑️</button>'
+                : '') +
+            '</div>' +
+          '</div>';
+      });
+      lvlListEl.innerHTML = lHtml;
+
+      var addQLvlBtns = lvlListEl.querySelectorAll(".btn-tax-add-q-lvl");
+      for (var a = 0; a < addQLvlBtns.length; a++) {
+        addQLvlBtns[a].addEventListener("click", function () {
+          var lid = this.getAttribute("data-lvl-id");
+          state.returnToQuizCreatorAfterQuestion = false;
+          switchAdminTab("tab-questions");
+          openQuestionEditor(null, { level: lid });
+        });
+      }
+
+      var quizLvlBtns = lvlListEl.querySelectorAll(".btn-tax-quiz-lvl");
+      for (var b = 0; b < quizLvlBtns.length; b++) {
+        quizLvlBtns[b].addEventListener("click", function () {
+          var lid = this.getAttribute("data-lvl-id");
+          var lvlObj = getLevelById(lid);
+          switchAdminTab("tab-quizzes");
+          openQuizCreator(null, {
+            levelFilter: lid,
+            title: (lvlObj.icon || "🎯") + " Quiz Niveau " + lvlObj.name,
+            description: "Quiz spécialement conçu pour le niveau " + formatLevelLabel(lvlObj),
+            autoSelectFiltered: true
+          });
+        });
+      }
+
+      var editLvlBtns = lvlListEl.querySelectorAll(".btn-tax-edit-lvl");
+      for (var c = 0; c < editLvlBtns.length; c++) {
+        editLvlBtns[c].addEventListener("click", function () {
+          editLevelById(this.getAttribute("data-lvl-id"));
+        });
+      }
+
+      var delLvlBtns = lvlListEl.querySelectorAll(".btn-tax-del-lvl");
+      for (var d = 0; d < delLvlBtns.length; d++) {
+        delLvlBtns[d].addEventListener("click", function () {
+          deleteLevelById(this.getAttribute("data-lvl-id"));
+        });
+      }
+    }
+  }
+
+  function saveCategoryFromForm() {
+    var editId = document.getElementById("edit-cat-id").value;
+    var name = document.getElementById("cat-name-input").value.trim();
+    var shortName = document.getElementById("cat-short-input").value.trim() || name.slice(0, 18);
+    var icon = document.getElementById("cat-icon-input").value || "🤾";
+    var color = document.getElementById("cat-color-input").value || "#0066cc";
+    var desc = document.getElementById("cat-desc-input").value.trim() || ("Questions thématiques : " + name);
+
+    if (!name) {
+      showToast("⚠️ Veuillez saisir un nom de catégorie.");
+      return;
+    }
+
+    if (editId) {
+      var existing = state.categories.find(function (c) { return c.id === editId; });
+      if (existing) {
+        existing.name = name;
+        existing.shortName = shortName;
+        existing.icon = icon;
+        existing.color = color;
+        existing.description = desc;
+      }
+      showToast("✅ Catégorie « " + name + " » modifiée !");
+    } else {
+      var newId = slugifyId("cat", name, state.categories);
+      state.categories.push({
+        id: newId,
+        name: name,
+        shortName: shortName,
+        icon: icon,
+        color: color,
+        description: desc
+      });
+      if (state.config.selectedCategories.indexOf(newId) === -1) {
+        state.config.selectedCategories.push(newId);
+        saveConfig();
+      }
+      showToast("🎉 Nouvelle catégorie « " + name + " » créée !");
+    }
+
+    saveCategories();
+    resetCategoryForm();
+    refreshAllUI();
+  }
+
+  function editCategoryById(catId) {
+    var cat = state.categories.find(function (c) { return c.id === catId; });
+    if (!cat) return;
+    document.getElementById("edit-cat-id").value = cat.id;
+    document.getElementById("cat-name-input").value = cat.name;
+    document.getElementById("cat-short-input").value = cat.shortName || "";
+    var iconSel = document.getElementById("cat-icon-input");
+    if (iconSel) {
+      iconSel.value = cat.icon || "🤾";
+      if (!iconSel.value) iconSel.selectedIndex = 0;
+    }
+    document.getElementById("cat-color-input").value = cat.color || "#0066cc";
+    document.getElementById("cat-desc-input").value = cat.description || "";
+    document.getElementById("btn-save-category").textContent = "💾 Enregistrer la catégorie";
+    document.getElementById("btn-cancel-edit-category").classList.remove("hidden");
+    document.getElementById("cat-name-input").focus();
+  }
+
+  function resetCategoryForm() {
+    document.getElementById("edit-cat-id").value = "";
+    document.getElementById("cat-name-input").value = "";
+    document.getElementById("cat-short-input").value = "";
+    document.getElementById("cat-desc-input").value = "";
+    document.getElementById("cat-color-input").value = "#0066cc";
+    document.getElementById("btn-save-category").textContent = "➕ Ajouter la catégorie";
+    document.getElementById("btn-cancel-edit-category").classList.add("hidden");
+  }
+
+  function deleteCategoryById(catId) {
+    if (state.categories.length <= 1) {
+      showToast("⚠️ Impossible de supprimer la dernière catégorie !");
+      return;
+    }
+    var target = state.categories.find(function (c) { return c.id === catId; });
+    if (!target) return;
+    var affectedCount = state.questions.filter(function (q) { return q.category === catId; }).length;
+    var fallback = state.categories.find(function (c) { return c.id !== catId; });
+
+    var msg = "Supprimer la catégorie « " + target.name + " » ?";
+    if (affectedCount > 0) {
+      msg += "\n" + affectedCount + " question(s) seront automatiquement déplacées dans « " + fallback.name + " ».";
+    }
+    if (!confirm(msg)) return;
+
+    state.categories = state.categories.filter(function (c) { return c.id !== catId; });
+    if (affectedCount > 0) {
+      state.questions.forEach(function (q) {
+        if (q.category === catId) q.category = fallback.id;
+      });
+      saveQuestions();
+    }
+    state.config.selectedCategories = state.config.selectedCategories.filter(function (id) { return id !== catId; });
+    saveCategories();
+    saveConfig();
+    resetCategoryForm();
+    refreshAllUI();
+    showToast("🗑️ Catégorie « " + target.name + " » supprimée.");
+  }
+
+  function saveLevelFromForm() {
+    var editId = document.getElementById("edit-level-id").value;
+    var name = document.getElementById("level-name-input").value.trim();
+    var ageRange = document.getElementById("level-age-input").value.trim();
+    var icon = document.getElementById("level-icon-input").value || "🏆";
+    var color = document.getElementById("level-color-input").value || "#e63946";
+
+    if (!name) {
+      showToast("⚠️ Veuillez saisir un nom de difficulté.");
+      return;
+    }
+
+    if (editId) {
+      var existing = state.levels.find(function (l) { return l.id === editId; });
+      if (existing) {
+        existing.name = name;
+        existing.ageRange = ageRange;
+        existing.icon = icon;
+        existing.color = color;
+      }
+      showToast("✅ Difficulté « " + name + " » modifiée !");
+    } else {
+      var newId = slugifyId("lvl", name, state.levels);
+      state.levels.push({
+        id: newId,
+        name: name,
+        ageRange: ageRange,
+        icon: icon,
+        color: color
+      });
+      showToast("🎉 Nouvelle difficulté « " + name + " » créée !");
+    }
+
+    saveLevels();
+    resetLevelForm();
+    refreshAllUI();
+  }
+
+  function editLevelById(levelId) {
+    var lvl = state.levels.find(function (l) { return l.id === levelId; });
+    if (!lvl) return;
+    document.getElementById("edit-level-id").value = lvl.id;
+    document.getElementById("level-name-input").value = lvl.name;
+    document.getElementById("level-age-input").value = lvl.ageRange || "";
+    var iconSel = document.getElementById("level-icon-input");
+    if (iconSel) {
+      iconSel.value = lvl.icon || "🏆";
+      if (!iconSel.value) iconSel.selectedIndex = 0;
+    }
+    document.getElementById("level-color-input").value = lvl.color || "#e63946";
+    document.getElementById("btn-save-level").textContent = "💾 Enregistrer la difficulté";
+    document.getElementById("btn-cancel-edit-level").classList.remove("hidden");
+    document.getElementById("level-name-input").focus();
+  }
+
+  function resetLevelForm() {
+    document.getElementById("edit-level-id").value = "";
+    document.getElementById("level-name-input").value = "";
+    document.getElementById("level-age-input").value = "";
+    document.getElementById("level-color-input").value = "#e63946";
+    document.getElementById("btn-save-level").textContent = "➕ Ajouter la difficulté";
+    document.getElementById("btn-cancel-edit-level").classList.add("hidden");
+  }
+
+  function deleteLevelById(levelId) {
+    if (state.levels.length <= 1) {
+      showToast("⚠️ Impossible de supprimer le dernier niveau de difficulté !");
+      return;
+    }
+    var target = state.levels.find(function (l) { return l.id === levelId; });
+    if (!target) return;
+    var affectedCount = state.questions.filter(function (q) { return q.level === levelId; }).length;
+    var fallback = state.levels.find(function (l) { return l.id !== levelId; });
+
+    var msg = "Supprimer le niveau de difficulté « " + target.name + " » ?";
+    if (affectedCount > 0) {
+      msg += "\n" + affectedCount + " question(s) passeront automatiquement au niveau « " + fallback.name + " ».";
+    }
+    if (!confirm(msg)) return;
+
+    state.levels = state.levels.filter(function (l) { return l.id !== levelId; });
+    if (affectedCount > 0) {
+      state.questions.forEach(function (q) {
+        if (q.level === levelId) q.level = fallback.id;
+      });
+      saveQuestions();
+    }
+    state.quizzes.forEach(function (qz) {
+      if (qz.level === levelId) qz.level = "all";
+    });
+    saveQuizzes();
+    if (state.config.levelFilter === levelId) {
+      state.config.levelFilter = "all";
+      saveConfig();
+    }
+    saveLevels();
+    resetLevelForm();
+    refreshAllUI();
+    showToast("🗑️ Difficulté « " + target.name + " » supprimée.");
+  }
+
+  function openQuickCategoryModal(context) {
+    state.quickModalContext = context || null;
+    document.getElementById("quick-cat-name").value = "";
+    document.getElementById("quick-cat-desc").value = "";
+    document.getElementById("quick-cat-color").value = "#7c3aed";
+    document.getElementById("modal-quick-category").classList.remove("hidden");
+    setTimeout(function () {
+      var inp = document.getElementById("quick-cat-name");
+      if (inp) inp.focus();
+    }, 40);
+  }
+
+  function closeQuickCategoryModal() {
+    document.getElementById("modal-quick-category").classList.add("hidden");
+  }
+
+  function saveQuickCategory() {
+    var name = document.getElementById("quick-cat-name").value.trim();
+    if (!name) return;
+    var icon = document.getElementById("quick-cat-icon").value || "🤾";
+    var color = document.getElementById("quick-cat-color").value || "#7c3aed";
+    var desc = document.getElementById("quick-cat-desc").value.trim() || ("Questions thématiques : " + name);
+    var newId = slugifyId("cat", name, state.categories);
+
+    state.categories.push({
+      id: newId,
+      name: name,
+      shortName: name.slice(0, 18),
+      icon: icon,
+      color: color,
+      description: desc
+    });
+    if (state.config.selectedCategories.indexOf(newId) === -1) {
+      state.config.selectedCategories.push(newId);
+      saveConfig();
+    }
+    saveCategories();
+    closeQuickCategoryModal();
+    refreshAllUI();
+
+    if (state.quickModalContext === "question-editor") {
+      populateCategorySelect(document.getElementById("q-category-input"), false, "", newId);
+    } else if (state.quickModalContext === "quiz-picker") {
+      populateCategorySelect(document.getElementById("picker-category-filter"), true, "Toutes les catégories", newId);
+      renderQuizPickerQuestions();
+    }
+    showToast("🎉 Catégorie « " + name + " » créée et sélectionnée !");
+  }
+
+  function openQuickLevelModal(context) {
+    state.quickModalContext = context || null;
+    document.getElementById("quick-level-name").value = "";
+    document.getElementById("quick-level-age").value = "";
+    document.getElementById("quick-level-color").value = "#e63946";
+    document.getElementById("modal-quick-level").classList.remove("hidden");
+    setTimeout(function () {
+      var inp = document.getElementById("quick-level-name");
+      if (inp) inp.focus();
+    }, 40);
+  }
+
+  function closeQuickLevelModal() {
+    document.getElementById("modal-quick-level").classList.add("hidden");
+  }
+
+  function saveQuickLevel() {
+    var name = document.getElementById("quick-level-name").value.trim();
+    if (!name) return;
+    var ageRange = document.getElementById("quick-level-age").value.trim();
+    var icon = document.getElementById("quick-level-icon").value || "🏆";
+    var color = document.getElementById("quick-level-color").value || "#e63946";
+    var newId = slugifyId("lvl", name, state.levels);
+
+    state.levels.push({
+      id: newId,
+      name: name,
+      ageRange: ageRange,
+      icon: icon,
+      color: color
+    });
+    saveLevels();
+    closeQuickLevelModal();
+    refreshAllUI();
+
+    if (state.quickModalContext === "question-editor") {
+      populateLevelSelect(document.getElementById("q-level-input"), false, "", newId);
+    } else if (state.quickModalContext === "quiz-creator") {
+      populateLevelSelect(document.getElementById("quiz-level-input"), true, "🎯 Tous niveaux", newId);
+      populateLevelSelect(document.getElementById("picker-level-filter"), true, "Toutes les difficultés", newId);
+      renderQuizPickerQuestions();
+    }
+    showToast("🎉 Difficulté « " + name + " » créée et sélectionnée !");
   }
 
   function renderAdminAnswersTab() {
@@ -3275,7 +4051,12 @@
     state.categories.forEach(function (cat) {
       var val = "cat_" + cat.id;
       var sel = currentVal === val ? " selected" : "";
-      fHtml += '<option value="' + escapeHtml(val) + '"' + sel + '>' + cat.icon + ' Catégorie : ' + escapeHtml(cat.name) + '</option>';
+      fHtml += '<option value="' + escapeHtml(val) + '"' + sel + '>' + (cat.icon || "🤾") + ' Catégorie : ' + escapeHtml(cat.name) + '</option>';
+    });
+    state.levels.forEach(function (lvl) {
+      var val = "lvl_" + lvl.id;
+      var sel = currentVal === val ? " selected" : "";
+      fHtml += '<option value="' + escapeHtml(val) + '"' + sel + '>' + escapeHtml("🎯 Difficulté : " + formatLevelLabel(lvl)) + '</option>';
     });
     filterSelect.innerHTML = fHtml;
 
@@ -3283,6 +4064,9 @@
     if (currentVal.indexOf("cat_") === 0) {
       var catId = currentVal.replace("cat_", "");
       listToDisplay = state.questions.filter(function (q) { return q.category === catId; });
+    } else if (currentVal.indexOf("lvl_") === 0) {
+      var lvlId = currentVal.replace("lvl_", "");
+      listToDisplay = state.questions.filter(function (q) { return q.level === lvlId; });
     } else if (currentVal !== "all") {
       var qzObj = state.quizzes.find(function (qz) { return qz.id === currentVal; });
       if (qzObj) {
@@ -3297,6 +4081,7 @@
 
     listToDisplay.forEach(function (q, idx) {
       var cat = getCategoryById(q.category);
+      var lvl = getLevelById(q.level);
       var optsMiniHtml = "";
       for (var i = 0; i < 4; i++) {
         var isGood = i === q.correctIndex;
@@ -3311,9 +4096,10 @@
 
       html +=
         '<div class="answer-sheet-card">' +
-          '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">' +
-            '<span style="font-size:0.78rem; font-weight:800; color:' + cat.color + ';">' +
-              '#' + (idx + 1) + ' • ' + cat.icon + ' ' + escapeHtml(cat.name) +
+          '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
+            '<span style="font-size:0.78rem; font-weight:800; color:' + escapeHtml(cat.color || "#0055A4") + ';">' +
+              '#' + (idx + 1) + ' • ' + (cat.icon || "🤾") + ' ' + escapeHtml(cat.name) +
+              ' • <span style="color:' + escapeHtml(lvl.color || "#16A34A") + ';">' + escapeHtml((lvl.icon || "🎯") + " " + lvl.name) + '</span>' +
             '</span>' +
             '<button type="button" class="btn-small-outline btn-sheet-edit-q" data-q-id="' + escapeHtml(q.id) + '">✏️ Modifier réponses</button>' +
           '</div>' +
@@ -3323,6 +4109,9 @@
         '</div>';
     });
 
+    if (!html) {
+      html = '<p class="form-help-text" style="padding:16px;">Aucune question dans ce filtre pour le moment.</p>';
+    }
     sheetEl.innerHTML = html;
 
     // Clic sur l'une des 4 réponses dans l'onglet 4 pour changer la bonne réponse en 1 clic
@@ -3439,6 +4228,7 @@
       club: "Marseille Provence Handball (MPHB)",
       event: "Stage Multisport de Noël — MPHB",
       exportedAt: new Date().toISOString(),
+      levels: state.levels,
       categories: state.categories,
       questions: state.questions,
       quizzes: state.quizzes
@@ -3453,6 +4243,7 @@
       " * BANQUE DE QUESTIONS & QUIZ — MARSEILLE PROVENCE HANDBALL (MPHB)\n" +
       " * Fichier généré depuis le Panel Admin du site\n" +
       " */\n\n" +
+      "window.MPHB_LEVELS = " + JSON.stringify(state.levels, null, 2) + ";\n\n" +
       "window.MPHB_CATEGORIES = " + JSON.stringify(state.categories, null, 2) + ";\n\n" +
       "window.INITIAL_QUESTIONS = " + JSON.stringify(state.questions, null, 2) + ";\n\n" +
       "window.INITIAL_QUIZZES = " + JSON.stringify(state.quizzes, null, 2) + ";\n";
@@ -3469,6 +4260,16 @@
     reader.onload = function (evt) {
       try {
         var data = JSON.parse(evt.target.result);
+        if (Array.isArray(data.levels) && data.levels.length > 0) {
+          state.levels = data.levels;
+          saveLevels();
+        }
+        if (Array.isArray(data.categories) && data.categories.length > 0) {
+          state.categories = data.categories;
+          state.config.selectedCategories = state.categories.map(function (c) { return c.id; });
+          saveCategories();
+          saveConfig();
+        }
         if (Array.isArray(data.questions) && data.questions.length > 0) {
           state.questions = data.questions;
           saveQuestions();
@@ -3478,7 +4279,11 @@
           saveQuizzes();
         }
         refreshAllUI();
-        showToast("✅ Importation réussie (" + state.questions.length + " questions, " + state.quizzes.length + " Quiz) !");
+        showToast(
+          "✅ Importation réussie (" + state.categories.length + " catégories, " +
+          state.levels.length + " difficultés, " + state.questions.length + " questions, " +
+          state.quizzes.length + " Quiz) !"
+        );
       } catch (err) {
         showToast("❌ Fichier JSON invalide.");
       }

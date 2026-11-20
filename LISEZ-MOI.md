@@ -41,13 +41,14 @@ Site web interactif, ludique et pédagogique conçu spécialement pour le **Stag
 L'accès au **Mode Animateur / Panel Admin** est protégé par un code secret afin d'empêcher les enfants d'accéder aux réponses ou aux réglages :
 - **Code secret par défaut** : **`1961`** (année de création du club sur le logo officiel) ou **`MPHB`**.
 - **Verrouillage en 1 clic** : Un bouton **« 🔒 Verrouiller »** en haut à droite du Panel Admin permet de reverrouiller l'accès immédiatement avant de laisser l'écran aux enfants.
-- **Personnalisation du code** : Vous pouvez modifier ce code secret à tout moment dans l'**Onglet 6 (`⚙️ Logo MPHB & Fichiers`)**.
+- **Personnalisation du code** : Vous pouvez modifier ce code secret à tout moment dans l'**Onglet 7 (`⚙️ Paramètres`)**.
 
-Une fois déverrouillé, le Panel Admin propose 6 onglets :
+Une fois déverrouillé, le Panel Admin propose 7 onglets :
 
-1. **🎮 1. Configurer & Lancer** : Choix du Quiz ou tirage par catégories, nombre de questions, niveau d'âge (*Découverte 6-9 ans* / *Confirmé 10-14 ans*), activation et durée du compte à rebours, gestion des équipes.
-2. **📚 2. Créer & Gérer les Quiz (« Studio Créateur de Quiz »)** : Créez vos propres Quiz sur-mesure, sélectionnez leurs questions, modifiez, dupliquez ou supprimez des quiz.
-3. **❓ 3. Banque de Questions (48 questions officielles incluses)** : Ajoutez, modifiez, dupliquez ou supprimez des questions directement avec les 4 briques colorées (`▲`, `◆`, `●`, `■`) sans modifier le code source.
-4. **📖 4. Réponses & Explications (Fiche Animateur)** : Consultez et imprimez (`🖨️`) toutes les réponses et explications pédagogiques.
-5. **🏆 5. Scores & Équipes** : Ajustez les points des équipes (`+100` / `-100` bonus fair-play) et consultez l'historique des parties de la session.
-6. **⚙️ 6. Logo Officiel MPHB & Fichiers** : Le logo officiel MPHB 1961 est intégré par défaut (et exportez/importez vos Quiz au format `.json` ou `questions.js`).
+1. **🎮 1. Configurer** : Choix du Quiz ou tirage par catégories et difficultés personnalisées, nombre de questions, activation et durée du compte à rebours, gestion des équipes.
+2. **📚 2. Mes Quiz (« Studio Créateur de Quiz »)** : Créez vos propres Quiz sur-mesure (avec difficulté, filtre par catégorie/difficulté, création rapide de questions/catégories/difficultés), modifiez, dupliquez ou supprimez des quiz.
+3. **❓ 3. Questions (48 questions officielles incluses)** : Ajoutez, modifiez (y compris le texte des réponses, la bonne réponse, la catégorie et la difficulté directement sur chaque carte), dupliquez ou supprimez des questions sans toucher au code.
+4. **🏷️ 4. Catégories & Difficultés** : Créez, modifiez ou supprimez vos propres catégories de questions (avec icône, couleur et description) et vos propres niveaux de difficulté (ex: *Baby-Hand*, *Difficile*, *Expert*), puis créez un Quiz ou une question dessus en 1 clic.
+5. **📖 5. Réponses** : Consultez, modifiez la bonne réponse en 1 clic et imprimez (`🖨️`) la fiche animateur filtrée par Quiz, Catégorie ou Difficulté.
+6. **🏆 6. Scores** : Ajustez les points des équipes (`+100` / `-100` bonus fair-play) et consultez l'historique des parties de la session.
+7. **⚙️ 7. Paramètres** : Logo officiel MPHB 1961, code secret Admin et export/import complet (catégories, difficultés, questions et quiz) au format `.json` ou `questions.js`.

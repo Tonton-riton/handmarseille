@@ -1,4 +1,20 @@
 {
+  "levels": [
+    {
+      "id": "facile",
+      "name": "Découverte / Facile",
+      "ageRange": "6-9 ans",
+      "icon": "⭐",
+      "color": "#16A34A"
+    },
+    {
+      "id": "moyen",
+      "name": "Confirmé / Moyen",
+      "ageRange": "10-14 ans",
+      "icon": "🔥",
+      "color": "#D97706"
+    }
+  ],
   "categories": [
     {
       "id": "regles",

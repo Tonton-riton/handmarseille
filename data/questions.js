@@ -23,6 +23,23 @@
  * - explanation : Explication pédagogique claire et conforme aux règles officielles FFHandball / IHF
  */
 
+window.MPHB_LEVELS = [
+  {
+    id: "facile",
+    name: "Découverte / Facile",
+    ageRange: "6-9 ans",
+    icon: "⭐",
+    color: "#16A34A"
+  },
+  {
+    id: "moyen",
+    name: "Confirmé / Moyen",
+    ageRange: "10-14 ans",
+    icon: "🔥",
+    color: "#D97706"
+  }
+];
+
 window.MPHB_CATEGORIES = [
   {
     id: "regles",
